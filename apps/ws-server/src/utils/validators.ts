@@ -1,3 +1,4 @@
+import { MemberRole } from "@prisma/client";
 import { z } from "zod";
 
 // Languages supported across rooms and execution (see .cursor/rules.md 10.5).
@@ -80,3 +81,28 @@ export const aiExplainSchema = z.object({
   language: z.string().min(1),
 });
 export type AiExplainInput = z.infer<typeof aiExplainSchema>;
+
+// ============================================
+// SHARED QUERY / PARAM SCHEMAS
+// ============================================
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+});
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+
+export const memberRoleSchema = z.object({
+  role: z.nativeEnum(MemberRole),
+});
+export type MemberRoleInput = z.infer<typeof memberRoleSchema>;
+
+export const roomIdParamSchema = z.object({
+  roomId: z.string().uuid(),
+});
+export type RoomIdParam = z.infer<typeof roomIdParamSchema>;
+
+export const signinSchema = z.object({
+  provider: z.literal("github"),
+});
+export type SigninInput = z.infer<typeof signinSchema>;

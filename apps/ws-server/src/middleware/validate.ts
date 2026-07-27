@@ -3,12 +3,12 @@ import { ZodError, type ZodSchema } from "zod";
 
 import { ValidationError } from "../utils/errors.js";
 
-// Validates `req.body` against a Zod schema. On failure, converts the ZodError
-// into a `path -> messages` map and forwards a ValidationError (see 10.6).
-export function validate<T>(schema: ZodSchema<T>): RequestHandler {
+type RequestSource = "body" | "params" | "query";
+
+function makeValidator<T>(schema: ZodSchema<T>, source: RequestSource): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
-      schema.parse(req.body);
+      schema.parse(req[source]);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -25,4 +25,19 @@ export function validate<T>(schema: ZodSchema<T>): RequestHandler {
       }
     }
   };
+}
+
+// Validates `req.body` against a Zod schema (see .cursor/rules.md 10.6).
+export function validate<T>(schema: ZodSchema<T>): RequestHandler {
+  return makeValidator(schema, "body");
+}
+
+// Validates `req.params` against a Zod schema.
+export function validateParams<T>(schema: ZodSchema<T>): RequestHandler {
+  return makeValidator(schema, "params");
+}
+
+// Validates `req.query` against a Zod schema.
+export function validateQuery<T>(schema: ZodSchema<T>): RequestHandler {
+  return makeValidator(schema, "query");
 }
