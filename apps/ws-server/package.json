@@ -4,16 +4,18 @@
   "private": true,
   "description": "DevCollab backend - Express + WebSocket server",
   "type": "module",
-  "main": "dist/app.js",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsx watch src/app.ts",
-    "start": "node dist/app.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --out-dir dist",
+    "start": "node dist/index.js",
     "test": "echo \"[ws-server] no tests yet\" && exit 0",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/prisma/seed.ts",
     "clean": "rimraf dist .turbo"
   },
   "prisma": {
@@ -22,6 +24,7 @@
   "dependencies": {
     "@devcollab/shared-types": "*",
     "@prisma/client": "^5.22.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "ioredis": "^5.11.1",
@@ -33,6 +36,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.23",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.24",
