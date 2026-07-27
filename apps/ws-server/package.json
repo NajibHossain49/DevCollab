@@ -22,6 +22,7 @@
   "dependencies": {
     "@devcollab/shared-types": "*",
     "@prisma/client": "^5.22.0",
+    "dotenv": "^17.4.2",
     "express": "^4.21.2",
     "pino": "^9.13.1",
     "zod": "^3.25.76"

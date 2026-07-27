@@ -1,6 +1,5 @@
 // Prisma schema for DevCollab.
-// Scaffold only — models (User, Room, RoomMember, Document, Execution,
-// ChatMessage) will be added in the database setup phase.
+// Models mirror Section 4 of .cursor/rules.md.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +8,169 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id       String  @id @default(uuid())
+  email    String  @unique
+  name     String
+  avatar   String? // GitHub avatar URL
+  githubId String  @unique
+
+  // Relations
+  ownedRooms  Room[]        @relation("RoomOwner")
+  memberships RoomMember[]
+  executions  Execution[]
+  messages    ChatMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([githubId])
+  @@map("users")
+}
+
+// ============================================
+// ROOM MODEL
+// ============================================
+model Room {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique // URL-friendly: "my-awesome-room"
+  description String?
+  language    String  @default("javascript") // javascript, python, typescript, etc.
+
+  // Visibility
+  isPublic Boolean @default(true)
+
+  // Relations
+  ownerId    String
+  owner      User          @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members    RoomMember[]
+  documents  Document[]
+  executions Execution[]
+  messages   ChatMessage[]
+
+  // Yjs document state (latest version)
+  yjsState Bytes? // Binary Yjs document state
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([ownerId])
+  @@index([isPublic])
+  @@map("rooms")
+}
+
+// ============================================
+// ROOM MEMBER MODEL (Junction Table)
+// ============================================
+model RoomMember {
+  id     String     @id @default(uuid())
+  roomId String
+  userId String
+  role   MemberRole @default(EDITOR)
+
+  // Relations
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@map("room_members")
+}
+
+enum MemberRole {
+  OWNER // Full control
+  EDITOR // Can edit code
+  VIEWER // Read-only
+}
+
+// ============================================
+// DOCUMENT MODEL (Version History)
+// ============================================
+model Document {
+  id     String @id @default(uuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Yjs document state at this version
+  yjsState Bytes
+
+  // Version info
+  version  Int
+  snapshot String? // Human-readable snapshot for debugging
+
+  createdAt DateTime @default(now())
+
+  @@unique([roomId, version])
+  @@index([roomId])
+  @@index([createdAt])
+  @@map("documents")
+}
+
+// ============================================
+// EXECUTION MODEL (Code Run History)
+// ============================================
+model Execution {
+  id     String @id @default(uuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Code that was executed
+  code     String @db.Text
+  language String
+
+  // Results
+  output String?         @db.Text
+  error  String?         @db.Text
+  status ExecutionStatus @default(PENDING)
+
+  // Metadata
+  executedById  String
+  executedBy    User    @relation(fields: [executedById], references: [id], onDelete: Cascade)
+  executionTime Int? // milliseconds
+
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+  @@index([executedById])
+  @@index([createdAt])
+  @@map("executions")
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  ERROR
+  TIMEOUT
+}
+
+// ============================================
+// CHAT MESSAGE MODEL (Room Chat)
+// ============================================
+model ChatMessage {
+  id     String @id @default(uuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  content String
+
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+  @@index([createdAt])
+  @@map("chat_messages")
 }
