@@ -1,0 +1,12 @@
+// Prisma schema for DevCollab.
+// Scaffold only — models (User, Room, RoomMember, Document, Execution,
+// ChatMessage) will be added in the database setup phase.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

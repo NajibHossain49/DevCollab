@@ -1,0 +1,2 @@
+// Authentication routes. Placeholder.
+export {};

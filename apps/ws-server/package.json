@@ -1,0 +1,38 @@
+{
+  "name": "@devcollab/ws-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevCollab backend - Express + WebSocket server",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx watch src/app.ts",
+    "start": "node dist/app.js",
+    "test": "echo \"[ws-server] no tests yet\" && exit 0",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "clean": "rimraf dist .turbo"
+  },
+  "prisma": {
+    "schema": "src/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@devcollab/shared-types": "*",
+    "@prisma/client": "^5.22.0",
+    "express": "^4.21.2",
+    "pino": "^9.13.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.23",
+    "@types/node": "^20.19.24",
+    "pino-pretty": "^11.3.0",
+    "prisma": "^5.22.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
