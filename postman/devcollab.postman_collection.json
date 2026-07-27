@@ -1,0 +1,309 @@
+{
+  "info": {
+    "name": "DevCollab API",
+    "_postman_id": "b6f0c1a2-3d4e-4f56-8a9b-devcollab0001",
+    "description": "REST API collection for the DevCollab ws-server backend (current state: auth, rooms, execute, ai).\n\n## Setup\n1. Import this collection into Postman.\n2. Set the collection variable `baseUrl` (default http://localhost:3001).\n3. Obtain a JWT and set it in the `token` variable (Bearer auth is applied at the collection level).\n4. Fill `slug`, `roomId`, `userId` variables as needed.\n\nNote: WebSocket (ws://.../ws) is not part of this REST collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "slug", "value": "my-room", "type": "string" },
+    { "key": "roomId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Sign in (get GitHub OAuth URL)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"github\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signin"]
+            },
+            "description": "Returns the GitHub OAuth authorization URL. Rate limited (5/min)."
+          }
+        },
+        {
+          "name": "GitHub OAuth callback",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/callback/github?code=GITHUB_CODE&state=STATE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "callback", "github"],
+              "query": [
+                { "key": "code", "value": "GITHUB_CODE" },
+                { "key": "state", "value": "STATE" }
+              ]
+            },
+            "description": "Exchanges the GitHub code, upserts the user, and returns { user, token }."
+          }
+        },
+        {
+          "name": "Sign out",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signout"]
+            },
+            "description": "Clears the session cookie."
+          }
+        },
+        {
+          "name": "Get current session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/session",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "session"]
+            },
+            "description": "Requires auth. Returns the current authenticated user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "Create room",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Awesome Room\",\n  \"description\": \"Pair programming session\",\n  \"language\": \"typescript\",\n  \"isPublic\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms"]
+            },
+            "description": "Requires auth. Rate limited (10/hour). language ∈ javascript|typescript|python|java|cpp|go|rust."
+          }
+        },
+        {
+          "name": "List my rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms?page=1&limit=20&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "" }
+              ]
+            },
+            "description": "Requires auth. Returns rooms where the user is owner or member."
+          }
+        },
+        {
+          "name": "Get room by slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}"]
+            },
+            "description": "Requires auth. Includes owner and members."
+          }
+        },
+        {
+          "name": "Update room",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed Room\",\n  \"description\": \"Updated description\",\n  \"language\": \"python\",\n  \"isPublic\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}"]
+            },
+            "description": "Requires auth + OWNER role. All fields optional."
+          }
+        },
+        {
+          "name": "Delete room",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}"]
+            },
+            "description": "Requires auth + OWNER role. Cascade removes members/documents/executions/messages."
+          }
+        },
+        {
+          "name": "Join room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}", "join"]
+            },
+            "description": "Requires auth. Adds the caller as an EDITOR."
+          }
+        },
+        {
+          "name": "Leave room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}/leave",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}", "leave"]
+            },
+            "description": "Requires auth. Owner cannot leave."
+          }
+        },
+        {
+          "name": "Update member role",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"VIEWER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}/members/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}", "members", "{{userId}}", "role"]
+            },
+            "description": "Requires auth + OWNER role. role ∈ OWNER|EDITOR|VIEWER."
+          }
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rooms/{{slug}}/members/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rooms", "{{slug}}", "members", "{{userId}}"]
+            },
+            "description": "Requires auth + OWNER role. Owner cannot be removed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Execute",
+      "item": [
+        {
+          "name": "Execute code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"code\": \"console.log('hello world')\",\n  \"language\": \"javascript\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "execute"]
+            },
+            "description": "Requires auth. Rate limited (10/min). Runs via Judge0."
+          }
+        },
+        {
+          "name": "Execution history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/execute/history/{{roomId}}?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "execute", "history", "{{roomId}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Requires auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Complete (SSE stream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"function factorial(n) {\\n  // complete\\n}\",\n  \"language\": \"javascript\",\n  \"cursorPosition\": { \"line\": 1, \"ch\": 2 }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "complete"]
+            },
+            "description": "Requires auth. Rate limited (30/min). Streams Server-Sent Events: `data: {\"completion\":\"...\"}` ... `data: [DONE]`."
+          }
+        },
+        {
+          "name": "Explain code",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"const add = (a, b) => a + b;\",\n  \"language\": \"javascript\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/explain",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "explain"]
+            },
+            "description": "Requires auth. Rate limited (20/min). One-shot explanation."
+          }
+        }
+      ]
+    }
+  ]
+}
