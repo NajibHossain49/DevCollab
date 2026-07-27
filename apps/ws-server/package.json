@@ -15,11 +15,11 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "clean": "rimraf dist .turbo"
   },
   "prisma": {
-    "schema": "src/prisma/schema.prisma"
+    "schema": "prisma/schema.prisma"
   },
   "dependencies": {
     "@devcollab/shared-types": "*",

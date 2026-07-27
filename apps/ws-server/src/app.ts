@@ -9,6 +9,7 @@ import express, {
 } from "express";
 import type { WebSocketServer } from "ws";
 
+import { corsOptions } from "./config/cors.js";
 import { prisma } from "./config/database.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
@@ -30,14 +31,7 @@ function buildApp(): Express {
   app.use(express.urlencoded({ extended: true }));
 
   // 3. CORS.
-  app.use(
-    cors({
-      origin: env.NEXTAUTH_URL,
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    }),
-  );
+  app.use(cors(corsOptions));
 
   // 4. Request logging (method, path, status, duration, userId).
   app.use((req: Request, res: Response, next: NextFunction): void => {

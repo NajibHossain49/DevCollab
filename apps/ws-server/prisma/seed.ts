@@ -1,5 +1,5 @@
-import { prisma } from "../config/database.js";
-import { logger } from "../config/logger.js";
+import { prisma } from "../src/config/database.js";
+import { logger } from "../src/config/logger.js";
 
 // Idempotent development seed. Extend as needed.
 async function main(): Promise<void> {
