@@ -241,7 +241,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "execute"]
             },
-            "description": "Requires auth. Rate limited (10/min). Runs via Judge0."
+            "description": "Requires auth. Rate limited (10/min). Runs via Piston."
           }
         },
         {

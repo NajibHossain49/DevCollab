@@ -11,7 +11,7 @@ Collaborate on code in real time with **live cursors**, **shared editing** (Yjs 
 - **Real-time collaborative editing** — Monaco Editor bound to a shared Yjs document over WebSockets.
 - **Presence & awareness** — live colored cursors, member avatars, and "who's typing" indicators.
 - **Room chat** — per-room messaging alongside the editor.
-- **Code execution** — run JavaScript, TypeScript, Python, Java, C++, Go, and Rust (via Judge0).
+- **Code execution** — run JavaScript, TypeScript, Python, Java, C++, Go, and Rust (via Piston).
 - **AI assistant** — inline ghost-text completions (Ctrl/Cmd+Space) and an "Explain code" action.
 - **GitHub authentication** — Auth.js (NextAuth v5) on the web, JWT-verified WebSockets on the server.
 - **Polished UX** — light/dark themes, skeleton loaders, error boundaries, and mobile-friendly panels.
@@ -45,7 +45,7 @@ devcollab/
 | Auth (web)      | Auth.js / NextAuth v5 (GitHub OAuth), `jose` for WS tokens        |
 | Backend         | Node.js 20+, Express, `ws` (WebSocket), TypeScript (strict)       |
 | Persistence     | PostgreSQL + Prisma, Redis                                        |
-| Execution / AI  | Judge0, Groq / Ollama                                             |
+| Execution / AI  | Piston, Groq / Ollama                                             |
 | Tooling         | Turborepo, tsup, tsx, Pino                                        |
 
 ---
@@ -67,7 +67,7 @@ flowchart LR
 
     DB[(PostgreSQL)]
     RD[(Redis)]
-    J0[Judge0]
+    J0[Piston]
     AI[Groq / Ollama]
 
     UI -- REST: rooms, executions, AI --> REST
@@ -90,7 +90,7 @@ flowchart LR
 - **Node.js 20+** and **npm**
 - **PostgreSQL** (default dev connection uses port **5433**)
 - **Redis** (default `redis://localhost:6379`)
-- Optional: a **Judge0** endpoint (code execution) and **Groq API key** or a local **Ollama** (AI features)
+- Optional: a **Piston** endpoint (code execution; defaults to the public dev instance) and **Groq API key** or a local **Ollama** (AI features)
 - A **GitHub OAuth app** (Authorization callback URL: `http://localhost:3000/api/auth/callback/github`)
 
 You can start Postgres and Redis quickly with Docker:
@@ -167,7 +167,7 @@ On startup both processes log a matching **auth secret fingerprint** (a short SH
 | `NEXTAUTH_SECRET`                     | ✅       | Token secret — **must equal web `AUTH_SECRET`**   |
 | `NEXTAUTH_URL`                        | ✅       | Server base URL                                   |
 | `PORT`                                | ➖       | Server port (default `3001`)                      |
-| `JUDGE0_API_URL` / `JUDGE0_API_KEY`   | ✅       | Code execution backend                            |
+| `PISTON_API_URL`                      | ➖       | Piston code-execution base URL (has a default)    |
 | `GROQ_API_KEY`                        | ➖       | AI completions/explain (or use Ollama)            |
 | `OLLAMA_URL`                          | ➖       | Local AI fallback (default `http://localhost:11434`) |
 | `LOG_LEVEL`                           | ➖       | `debug` \| `info` \| `warn` \| `error`            |
@@ -223,5 +223,5 @@ Requirements in production:
 - [ ] GitHub OAuth callback points at the deployed web URL
 - [ ] `NEXT_PUBLIC_WS_URL` uses `wss://` behind TLS
 - [ ] Database migrated and reachable from the ws-server
-- [ ] Judge0 / AI provider configured (or features disabled gracefully)
+- [ ] Piston / AI provider configured (or features disabled gracefully)
 ```

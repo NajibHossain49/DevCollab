@@ -26,9 +26,10 @@ const envSchema = z.object({
   OLLAMA_URL: z.string().url().default("http://localhost:11434"),
   GROQ_API_KEY: z.string().optional(),
 
-  // Code Execution (Judge0)
-  JUDGE0_API_URL: z.string().url(),
-  JUDGE0_API_KEY: z.string().min(1),
+  // Code Execution (Piston)
+  // Base URL of the Piston API. Public dev instance by default; for a
+  // self-hosted engine use e.g. http://localhost:2000.
+  PISTON_API_URL: z.string().url().default("https://emkc.org/api/v2/piston"),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

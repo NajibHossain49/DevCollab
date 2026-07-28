@@ -138,8 +138,8 @@ export interface PaginationParams {
   search?: string;
 }
 
-// Languages supported by the code-execution backend (mirrors Judge0 mapping in
-// the SRS). Used by the create-room form and language badges.
+// Languages supported by the code-execution backend (mapped to Piston language
+// runtimes server-side). Used by the create-room form and language badges.
 export const SUPPORTED_LANGUAGES = [
   { value: "javascript", label: "JavaScript" },
   { value: "typescript", label: "TypeScript" },

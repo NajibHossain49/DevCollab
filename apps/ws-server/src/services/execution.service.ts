@@ -5,99 +5,127 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError, DatabaseError } from "../utils/errors.js";
 
-// Judge0 language ids (see .cursor/rules.md Section 8.1).
-const JUDGE0_LANGUAGE_IDS: Record<string, number> = {
-  javascript: 63,
-  typescript: 74,
-  python: 71,
-  java: 62,
-  cpp: 54,
-  go: 60,
-  rust: 73,
+// Maps our language keys to Piston language names + source file names. Piston
+// selects a runtime from the `language` (or an alias) and the requested version.
+const PISTON_LANGUAGES: Record<string, { language: string; filename: string }> = {
+  javascript: { language: "javascript", filename: "main.js" },
+  typescript: { language: "typescript", filename: "main.ts" },
+  python: { language: "python", filename: "main.py" },
+  // Java's public class must match the file name; user code should declare `Main`.
+  java: { language: "java", filename: "Main.java" },
+  cpp: { language: "c++", filename: "main.cpp" },
+  go: { language: "go", filename: "main.go" },
+  rust: { language: "rust", filename: "main.rs" },
 };
 
-const MAX_POLL_MS = 5000;
-const POLL_INTERVAL_MS = 500;
+const COMPILE_TIMEOUT_MS = 10_000;
+const RUN_TIMEOUT_MS = 5_000;
+const RUNTIMES_CACHE_TTL_MS = 5 * 60_000;
 
-interface Judge0SubmissionResponse {
-  token: string;
+interface PistonRuntime {
+  language: string;
+  version: string;
+  aliases: string[];
 }
 
-interface Judge0ResultResponse {
-  stdout: string | null;
-  stderr: string | null;
-  compile_output: string | null;
-  message: string | null;
-  time: string | null;
-  status: { id: number; description: string };
+interface PistonStage {
+  stdout: string;
+  stderr: string;
+  output: string;
+  code: number | null;
+  signal: string | null;
 }
 
-function judge0Headers(): Record<string, string> {
-  const host = new URL(env.JUDGE0_API_URL).host;
-  return {
-    "Content-Type": "application/json",
-    "X-RapidAPI-Key": env.JUDGE0_API_KEY,
-    "X-RapidAPI-Host": host,
-  };
+interface PistonExecuteResponse {
+  language: string;
+  version: string;
+  run: PistonStage;
+  compile?: PistonStage;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+// Builds a Piston endpoint URL, tolerating both an emkc-style base that already
+// contains the versioned path (…/api/v2/piston) and a bare self-hosted host
+// (http://localhost:2000), for which we append /api/v2.
+function pistonUrl(resource: "execute" | "runtimes"): string {
+  const base = env.PISTON_API_URL.replace(/\/+$/, "");
+  return base.includes("/api/v2")
+    ? `${base}/${resource}`
+    : `${base}/api/v2/${resource}`;
 }
 
-// Maps a Judge0 status id to our ExecutionStatus enum.
-function mapJudge0Status(statusId: number): ExecutionStatus {
-  if (statusId === 3) {
-    return ExecutionStatus.SUCCESS;
+let runtimesCache: { runtimes: PistonRuntime[]; fetchedAt: number } | null = null;
+
+// Fetches (and caches) the list of runtimes so we can resolve a concrete
+// version for a language. Failures are non-fatal — callers fall back to "*".
+async function getRuntimes(): Promise<PistonRuntime[]> {
+  if (runtimesCache && Date.now() - runtimesCache.fetchedAt < RUNTIMES_CACHE_TTL_MS) {
+    return runtimesCache.runtimes;
   }
-  if (statusId === 5) {
-    return ExecutionStatus.TIMEOUT;
+
+  const response = await fetch(pistonUrl("runtimes"));
+  if (!response.ok) {
+    throw new AppError("EXECUTION_FAILED", `Piston runtimes lookup failed (${response.status})`, 502);
   }
-  return ExecutionStatus.ERROR;
+
+  const runtimes = (await response.json()) as PistonRuntime[];
+  runtimesCache = { runtimes, fetchedAt: Date.now() };
+  return runtimes;
 }
 
-async function createSubmission(code: string, languageId: number): Promise<string> {
-  const response = await fetch(
-    `${env.JUDGE0_API_URL}/submissions?base64_encoded=false&wait=false`,
-    {
-      method: "POST",
-      headers: judge0Headers(),
-      body: JSON.stringify({ source_code: code, language_id: languageId, stdin: "" }),
-    },
-  );
+// Resolves the latest available version for a Piston language. Returns "*"
+// (Piston's "any version" selector) if the runtime list can't be consulted.
+async function resolveVersion(pistonLanguage: string): Promise<string> {
+  try {
+    const runtimes = await getRuntimes();
+    const match = runtimes.find(
+      (runtime) =>
+        runtime.language === pistonLanguage ||
+        runtime.aliases.includes(pistonLanguage),
+    );
+    return match?.version ?? "*";
+  } catch (error) {
+    logger.warn({ error, pistonLanguage }, "Falling back to version '*' for Piston");
+    return "*";
+  }
+}
+
+async function runOnPiston(
+  code: string,
+  mapping: { language: string; filename: string },
+): Promise<PistonExecuteResponse> {
+  const version = await resolveVersion(mapping.language);
+
+  const response = await fetch(pistonUrl("execute"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      language: mapping.language,
+      version,
+      files: [{ name: mapping.filename, content: code }],
+      stdin: "",
+      args: [],
+      compile_timeout: COMPILE_TIMEOUT_MS,
+      run_timeout: RUN_TIMEOUT_MS,
+    }),
+  });
 
   if (!response.ok) {
-    throw new AppError("EXECUTION_FAILED", `Judge0 submission failed (${response.status})`, 502);
+    throw new AppError("EXECUTION_FAILED", `Piston execute failed (${response.status})`, 502);
   }
 
-  const data = (await response.json()) as Judge0SubmissionResponse;
-  return data.token;
+  return (await response.json()) as PistonExecuteResponse;
 }
 
-async function pollSubmission(token: string): Promise<Judge0ResultResponse> {
-  const deadline = Date.now() + MAX_POLL_MS;
-
-  for (;;) {
-    const response = await fetch(
-      `${env.JUDGE0_API_URL}/submissions/${token}?base64_encoded=false`,
-      { headers: judge0Headers() },
-    );
-
-    if (!response.ok) {
-      throw new AppError("EXECUTION_FAILED", `Judge0 polling failed (${response.status})`, 502);
-    }
-
-    const result = (await response.json()) as Judge0ResultResponse;
-
-    // Status ids 1 (In Queue) and 2 (Processing) mean we should keep polling.
-    if (result.status.id > 2) {
-      return result;
-    }
-    if (Date.now() >= deadline) {
-      return result;
-    }
-    await sleep(POLL_INTERVAL_MS);
+// Derives our ExecutionStatus from a Piston result. A killed signal indicates a
+// timeout; a non-zero compile or run exit code is an error.
+function mapPistonStatus(result: PistonExecuteResponse): ExecutionStatus {
+  if (result.compile && result.compile.code !== 0) {
+    return ExecutionStatus.ERROR;
   }
+  if (result.run.signal === "SIGKILL") {
+    return ExecutionStatus.TIMEOUT;
+  }
+  return result.run.code === 0 ? ExecutionStatus.SUCCESS : ExecutionStatus.ERROR;
 }
 
 export async function executeCode(
@@ -122,8 +150,8 @@ export async function executeCode(
     throw new DatabaseError("Failed to create execution");
   }
 
-  const languageId = JUDGE0_LANGUAGE_IDS[language];
-  if (languageId === undefined) {
+  const mapping = PISTON_LANGUAGES[language];
+  if (mapping === undefined) {
     logger.warn({ executionId: execution.id, language }, "Unsupported execution language");
     return finalizeExecution(execution.id, {
       status: ExecutionStatus.ERROR,
@@ -133,18 +161,19 @@ export async function executeCode(
 
   const startedAt = Date.now();
   try {
-    const token = await createSubmission(code, languageId);
-    const result = await pollSubmission(token);
-    const status = Date.now() - startedAt >= MAX_POLL_MS && result.status.id <= 2
-      ? ExecutionStatus.TIMEOUT
-      : mapJudge0Status(result.status.id);
+    const result = await runOnPiston(code, mapping);
+    const status = mapPistonStatus(result);
+
+    // Prefer a compile error message when compilation failed, otherwise runtime stderr.
+    const compileError =
+      result.compile && result.compile.code !== 0 ? result.compile.stderr : null;
 
     logger.info({ executionId: execution.id, roomId, status }, "Code execution finished");
     return finalizeExecution(execution.id, {
       status,
-      output: result.stdout,
-      error: result.stderr ?? result.compile_output ?? result.message,
-      executionTime: result.time ? Math.round(Number.parseFloat(result.time) * 1000) : Date.now() - startedAt,
+      output: result.run.stdout || null,
+      error: compileError || result.run.stderr || null,
+      executionTime: Date.now() - startedAt,
     });
   } catch (error) {
     logger.error({ error, executionId: execution.id, roomId }, "Code execution failed");
