@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { CreateRoomModal } from "@/components/room/CreateRoomModal";
 import { RoomCard } from "@/components/room/RoomCard";
+import { RoomCardSkeletonGrid } from "@/components/room/RoomCardSkeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,15 +76,7 @@ export function RoomList() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card
-              key={index}
-              className="h-40 animate-pulse bg-muted/40"
-              aria-hidden
-            />
-          ))}
-        </div>
+        <RoomCardSkeletonGrid />
       ) : isError ? (
         <Card className="flex flex-col items-center gap-3 p-10 text-center">
           <p className="text-sm text-muted-foreground">

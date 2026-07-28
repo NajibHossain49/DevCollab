@@ -16,7 +16,7 @@ import { useState } from "react";
 import { CreateRoomModal } from "@/components/room/CreateRoomModal";
 import { Avatar, initialsFromName } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useRooms } from "@/hooks/useRooms";
 import { cn } from "@/lib/utils";
@@ -89,8 +89,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         {roomsExpanded ? (
           <div className="mt-1 flex flex-col gap-0.5 overflow-y-auto pb-2">
             {isLoading ? (
-              <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
-                <Spinner /> Loading…
+              <div className="flex flex-col gap-1 px-3 py-1">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton key={index} className="h-7 w-full" />
+                ))}
               </div>
             ) : rooms.length === 0 ? (
               <p className="px-3 py-2 text-sm text-muted-foreground">

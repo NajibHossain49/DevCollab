@@ -1,5 +1,6 @@
 "use client";
 
+import { MessageSquare, Play, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,10 +10,12 @@ import { LiveCursors } from "@/components/awareness/LiveCursors";
 import { TypingIndicator } from "@/components/awareness/TypingIndicator";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { EditorInstanceProvider } from "@/components/editor/editor-context";
+import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
 import { YjsProvider } from "@/components/editor/YjsProvider";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { ExecutionPanel } from "@/components/execution/ExecutionPanel";
 import { RoomHeader } from "@/components/room/RoomHeader";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoom } from "@/hooks/useRoom";
 import { cn } from "@/lib/utils";
@@ -27,7 +30,7 @@ const CodeEditor = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-        <Spinner /> Loading editor…
+        Loading editor…
       </div>
     ),
   },
@@ -35,10 +38,10 @@ const CodeEditor = dynamic(
 
 type PanelTab = "chat" | "run" | "ai";
 
-const TABS: { id: PanelTab; label: string }[] = [
-  { id: "chat", label: "Chat" },
-  { id: "run", label: "Run" },
-  { id: "ai", label: "AI" },
+const TABS: { id: PanelTab; label: string; icon: typeof MessageSquare }[] = [
+  { id: "chat", label: "Chat", icon: MessageSquare },
+  { id: "run", label: "Run", icon: Play },
+  { id: "ai", label: "AI", icon: Sparkles },
 ];
 
 export default function RoomPage() {
@@ -51,6 +54,7 @@ export default function RoomPage() {
   const { room, isLoading, isError } = useRoom(slug);
   const setLanguage = useEditorStore((s) => s.setLanguage);
   const [tab, setTab] = useState<PanelTab>("chat");
+  const [mobilePanel, setMobilePanel] = useState<PanelTab | null>(null);
 
   useEffect(() => {
     if (room?.language) {
@@ -59,12 +63,7 @@ export default function RoomPage() {
   }, [room?.language, setLanguage]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
-        <Spinner />
-        <span className="text-sm">Loading room…</span>
-      </div>
-    );
+    return <EditorSkeleton />;
   }
 
   if (isError || !room) {
@@ -74,9 +73,18 @@ export default function RoomPage() {
         <p className="text-sm text-muted-foreground">
           It may have been deleted or you don&apos;t have access.
         </p>
+        <Button variant="outline" className="mt-2" asChild>
+          <a href="/dashboard">Back to rooms</a>
+        </Button>
       </div>
     );
   }
+
+  const renderPanel = (id: PanelTab) => {
+    if (id === "chat") return <ChatPanel />;
+    if (id === "run") return <ExecutionPanel roomId={room.id} />;
+    return <AIAssistant />;
+  };
 
   return (
     <YjsProvider roomId={room.id}>
@@ -85,14 +93,31 @@ export default function RoomPage() {
           <RoomHeader room={room} />
 
           <div className="flex min-h-0 flex-1">
-            {/* Editor + awareness overlays */}
+            {/* Editor + awareness overlays. Isolated so a Monaco crash doesn't
+                take down chat/execution. */}
             <div className="relative min-w-0 flex-1">
-              <CodeEditor />
-              <LiveCursors />
-              <TypingIndicator />
+              <ErrorBoundary
+                label="editor"
+                fallback={(error, reset) => (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                    <p className="font-medium">The editor crashed</p>
+                    <p className="max-w-sm text-sm text-muted-foreground">
+                      {error.message ||
+                        "Monaco failed to render. Your document is safe on the server."}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={reset}>
+                      Reload editor
+                    </Button>
+                  </div>
+                )}
+              >
+                <CodeEditor />
+                <LiveCursors />
+                <TypingIndicator />
+              </ErrorBoundary>
             </div>
 
-            {/* Side panels */}
+            {/* Desktop side panels */}
             <aside className="hidden w-96 shrink-0 flex-col border-l border-border md:flex">
               <div className="flex border-b border-border">
                 {TABS.map((t) => (
@@ -112,13 +137,60 @@ export default function RoomPage() {
                 ))}
               </div>
               <div className="min-h-0 flex-1">
-                {tab === "chat" ? <ChatPanel /> : null}
-                {tab === "run" ? <ExecutionPanel roomId={room.id} /> : null}
-                {tab === "ai" ? <AIAssistant /> : null}
+                <ErrorBoundary label="panel">{renderPanel(tab)}</ErrorBoundary>
               </div>
             </aside>
           </div>
+
+          {/* Mobile action bar (panels are hidden on small screens) */}
+          <div className="flex border-t border-border md:hidden">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setMobilePanel(t.id)}
+                  className="flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Icon className="size-4" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Mobile bottom sheet */}
+        {mobilePanel ? (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div
+              className="absolute inset-0 bg-black/60"
+              onClick={() => setMobilePanel(null)}
+              aria-hidden
+            />
+            <div className="absolute inset-x-0 bottom-0 flex h-[75vh] flex-col rounded-t-xl border-t border-border bg-card shadow-xl">
+              <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+                <span className="text-sm font-semibold capitalize">
+                  {TABS.find((t) => t.id === mobilePanel)?.label}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Close panel"
+                  onClick={() => setMobilePanel(null)}
+                >
+                  <X />
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <ErrorBoundary label="panel">
+                  {renderPanel(mobilePanel)}
+                </ErrorBoundary>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </EditorInstanceProvider>
     </YjsProvider>
   );
