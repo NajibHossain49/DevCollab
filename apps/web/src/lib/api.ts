@@ -23,14 +23,81 @@ import type {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // ---------------------------------------------------------------------------
-// Auth token injection. The token is set from the session layer (see
-// AuthProvider) rather than read directly here, keeping this module
-// framework-agnostic.
+// Auth token management. The API server (ws-server) authenticates every
+// request with an HS256 JWT signed by the web app's /api/ws-token route using
+// the same secret as the ws-server's NEXTAUTH_SECRET. We fetch that token
+// lazily, cache it until shortly before it expires, and refresh on demand.
+// This is the SAME token the WebSocket collab provider uses, keeping REST and
+// WebSocket auth consistent. (Previously the raw GitHub OAuth access token was
+// sent, which the ws-server could not verify — causing 401s on every call.)
 // ---------------------------------------------------------------------------
-let authToken: string | null = null;
+interface CachedToken {
+  token: string;
+  /** Expiry in unix seconds, decoded from the JWT. */
+  exp: number;
+}
 
-export function setAuthToken(token: string | null): void {
-  authToken = token;
+let cachedToken: CachedToken | null = null;
+let inFlight: Promise<string | null> | null = null;
+
+function decodeJwtExp(token: string): number {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) {
+      return 0;
+    }
+    const json = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    ) as { exp?: number };
+    return typeof json.exp === "number" ? json.exp : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Drops the cached token so the next request mints a fresh one. Call on
+// sign-out or when the active account changes.
+export function clearAuthToken(): void {
+  cachedToken = null;
+  inFlight = null;
+}
+
+async function requestWsToken(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    // Same-origin request to the Next.js route (NOT the API base URL): it reads
+    // the Auth.js session cookie and mints a JWT the API server can verify.
+    const res = await fetch("/api/ws-token", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const json = (await res.json()) as { data?: { token?: string } };
+    const token = json.data?.token;
+    if (typeof token !== "string") {
+      return null;
+    }
+    cachedToken = { token, exp: decodeJwtExp(token) };
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+async function getAuthToken(): Promise<string | null> {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedToken && cachedToken.exp - 30 > now) {
+    return cachedToken.token;
+  }
+  // De-dupe concurrent fetches so a burst of requests shares one token fetch.
+  inFlight ??= requestWsToken().finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
 }
 
 // Normalized error thrown by every API call so callers get a consistent shape.
@@ -52,23 +119,35 @@ export const apiClient: AxiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Request interceptor: attach the bearer token when available.
-apiClient.interceptors.request.use((config) => {
-  if (authToken) {
-    config.headers.set("Authorization", `Bearer ${authToken}`);
+// Request interceptor: attach a fresh bearer token to every request.
+apiClient.interceptors.request.use(async (config) => {
+  const token = await getAuthToken();
+  if (token) {
+    config.headers.set("Authorization", `Bearer ${token}`);
   }
   return config;
 });
 
-// Response interceptor: redirect on 401 and normalize errors.
+// Response interceptor: on 401, refresh the token and retry ONCE, then
+// normalize errors. We intentionally do NOT hard-redirect to /login here —
+// doing so created an infinite dashboard<->login loop, since the login page
+// bounces authenticated users straight back to the dashboard. Session expiry
+// is handled by Auth.js (useAuth) instead.
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiResponse<unknown>>) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
     const status = error.response?.status ?? 0;
+    const config = error.config as
+      | (AxiosRequestConfig & { _retried?: boolean })
+      | undefined;
 
-    if (status === 401 && typeof window !== "undefined") {
-      // Session expired / missing — send the user to sign in.
-      window.location.href = "/login";
+    if (status === 401 && config && !config._retried) {
+      config._retried = true;
+      clearAuthToken();
+      const token = await getAuthToken();
+      if (token) {
+        return apiClient.request(config);
+      }
     }
 
     const body = error.response?.data?.error;
@@ -177,20 +256,22 @@ export const aiApi = {
 
   // Streaming completion (SSE). Returns the raw Response so callers can read
   // the token stream; token is attached manually since this bypasses axios.
-  completeStream: (
+  completeStream: async (
     body: { code: string; language: string; cursorPosition: { line: number; ch: number } },
     signal?: AbortSignal,
-  ): Promise<Response> =>
-    fetch(`${API_BASE_URL}/api/ai/complete`, {
+  ): Promise<Response> => {
+    const token = await getAuthToken();
+    return fetch(`${API_BASE_URL}/api/ai/complete`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
       credentials: "include",
       signal,
-    }),
+    });
+  },
 };
 
 export const api = {

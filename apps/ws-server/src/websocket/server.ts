@@ -5,9 +5,9 @@ import type { User } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { WebSocket, WebSocketServer } from "ws";
 
-import { prisma } from "../config/database.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
+import { resolveUserFromPayload } from "../middleware/auth.js";
 import { connectionManager, sendMessage, type Connection } from "./connection.js";
 import { awarenessManager } from "./managers/awareness-manager.js";
 import { documentManager } from "./managers/document-manager.js";
@@ -34,12 +34,7 @@ async function authenticate(token: string): Promise<User | null> {
     if (typeof payload === "string") {
       return null;
     }
-    const record = payload as Record<string, unknown>;
-    const candidate = payload.sub ?? record["userId"] ?? record["id"];
-    if (typeof candidate !== "string") {
-      return null;
-    }
-    return await prisma.user.findUnique({ where: { id: candidate } });
+    return await resolveUserFromPayload(payload);
   } catch {
     return null;
   }

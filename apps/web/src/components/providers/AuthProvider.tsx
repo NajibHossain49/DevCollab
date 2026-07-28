@@ -3,15 +3,21 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import { useEffect, type ReactNode } from "react";
 
-import { setAuthToken } from "@/lib/api";
+import { clearAuthToken } from "@/lib/api";
 
-// Keeps the API client's bearer token in sync with the active session.
+// Drops the API client's cached JWT whenever the signed-in user changes (login,
+// logout, or account switch) so the next request mints a token for the right
+// user. The token itself is fetched lazily from /api/ws-token by the API
+// client, so there is nothing to push in here.
 function TokenSync() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
 
   useEffect(() => {
-    setAuthToken(session?.accessToken ?? null);
-  }, [session?.accessToken]);
+    if (status !== "loading") {
+      clearAuthToken();
+    }
+  }, [status, userId]);
 
   return null;
 }

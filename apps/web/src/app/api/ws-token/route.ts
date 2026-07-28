@@ -33,8 +33,10 @@ export async function GET(): Promise<NextResponse> {
 
   const token = await new SignJWT({
     sub: userId,
+    githubId: session.user?.githubId ?? userId,
     name: session.user?.name ?? undefined,
     email: session.user?.email ?? undefined,
+    avatar: session.user?.image ?? undefined,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

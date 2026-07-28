@@ -32,6 +32,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # Self-hosted Piston code-execution engine. The public emkc.org instance is
+  # whitelist-only (returns 401), so we run our own. Set the ws-server's
+  # PISTON_API_URL to http://localhost:2000. Language runtimes are installed
+  # separately via Piston's package API (see README "Code execution").
+  #
+  # NOTE: requires privileged mode to sandbox untrusted code with isolate.
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: devcollab-piston
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston
+    tmpfs:
+      - /piston/jobs:exec,uid=1000,gid=1000,mode=711
+
 volumes:
   postgres_data:
   redis_data:
+  piston_data:
