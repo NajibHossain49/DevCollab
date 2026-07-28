@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, Play, XCircle } from "lucide-react";
-import { useEffect } from "react";
+import { CheckCircle2, Play, Trash2, X, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,14 @@ import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/types";
 
 interface ExecutionPanelProps {
   roomId: string;
+  /** Whether the current user may clear the room's run history (owner only). */
+  canClearHistory?: boolean;
 }
 
-export function ExecutionPanel({ roomId }: ExecutionPanelProps) {
+export function ExecutionPanel({
+  roomId,
+  canClearHistory = false,
+}: ExecutionPanelProps) {
   const language = useEditorStore((s) => s.language);
   const setLanguage = useEditorStore((s) => s.setLanguage);
   const currentCode = useEditorStore((s) => s.currentCode);
@@ -30,6 +35,11 @@ export function ExecutionPanel({ roomId }: ExecutionPanelProps) {
   const setExecutionResult = useEditorStore((s) => s.setExecutionResult);
   const addExecution = useEditorStore((s) => s.addExecution);
   const setExecutionHistory = useEditorStore((s) => s.setExecutionHistory);
+  const clearExecutionOutput = useEditorStore((s) => s.clearExecutionOutput);
+  const clearExecutionHistory = useEditorStore((s) => s.clearExecutionHistory);
+
+  const [clearingHistory, setClearingHistory] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +84,26 @@ export function ExecutionPanel({ roomId }: ExecutionPanelProps) {
     }
   };
 
+  const handleClearHistory = async (): Promise<void> => {
+    if (clearingHistory || history.length === 0) return;
+    setClearingHistory(true);
+    setClearError(null);
+    try {
+      await executeApi.clearHistory(roomId);
+      clearExecutionHistory();
+    } catch (err) {
+      setClearError(
+        err instanceof ApiError
+          ? err.message
+          : "Failed to clear history. Please try again.",
+      );
+    } finally {
+      setClearingHistory(false);
+    }
+  };
+
+  const hasOutput = output !== null || error !== null;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border p-3">
@@ -108,9 +138,22 @@ export function ExecutionPanel({ roomId }: ExecutionPanelProps) {
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
         <section>
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Output
-          </h3>
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Output
+            </h3>
+            {hasOutput && !isExecuting ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+                onClick={clearExecutionOutput}
+              >
+                <X className="size-3.5" />
+                Clear
+              </Button>
+            ) : null}
+          </div>
           <pre className="min-h-16 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-3 font-mono text-xs">
             {isExecuting ? "Running…" : (output ?? "—")}
           </pre>
@@ -122,9 +165,30 @@ export function ExecutionPanel({ roomId }: ExecutionPanelProps) {
         </section>
 
         <section>
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            History
-          </h3>
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              History
+            </h3>
+            {canClearHistory && history.length > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
+                onClick={handleClearHistory}
+                disabled={clearingHistory}
+              >
+                {clearingHistory ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                Clear
+              </Button>
+            ) : null}
+          </div>
+          {clearError ? (
+            <p className="mb-1 text-xs text-destructive">{clearError}</p>
+          ) : null}
           {history.length === 0 ? (
             <p className="text-sm text-muted-foreground">No runs yet.</p>
           ) : (

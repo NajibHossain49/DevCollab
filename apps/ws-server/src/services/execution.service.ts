@@ -208,6 +208,19 @@ async function finalizeExecution(executionId: string, data: FinalizeData): Promi
   }
 }
 
+// Permanently deletes every execution record for a room. Returns how many rows
+// were removed. Used by the room owner to clear run history.
+export async function clearExecutionHistory(roomId: string): Promise<number> {
+  try {
+    const { count } = await prisma.execution.deleteMany({ where: { roomId } });
+    logger.info({ roomId, count }, "Cleared execution history");
+    return count;
+  } catch (error) {
+    logger.error({ error, roomId }, "Failed to clear execution history");
+    throw new DatabaseError("Failed to clear execution history");
+  }
+}
+
 export async function getExecutionHistory(
   roomId: string,
   page: number,

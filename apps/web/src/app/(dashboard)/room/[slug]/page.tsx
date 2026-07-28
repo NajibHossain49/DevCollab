@@ -49,7 +49,7 @@ export default function RoomPage() {
   const slug = params.slug;
 
   // Redundant with the dashboard layout guard, but explicit per the spec.
-  useAuth({ required: true });
+  const { user } = useAuth({ required: true });
 
   const { room, isLoading, isError } = useRoom(slug);
   const setLanguage = useEditorStore((s) => s.setLanguage);
@@ -80,9 +80,23 @@ export default function RoomPage() {
     );
   }
 
+  // The session user id is the GitHub id, while room.ownerId is the ws-server's
+  // database uuid — they never match directly. The detail response includes the
+  // owner's githubId, so compare on that instead.
+  const isOwner =
+    !!user &&
+    room.owner?.githubId != null &&
+    room.owner.githubId === (user.githubId ?? user.id);
+
   const renderPanel = (id: PanelTab) => {
     if (id === "chat") return <ChatPanel />;
-    if (id === "run") return <ExecutionPanel roomId={room.id} />;
+    if (id === "run")
+      return (
+        <ExecutionPanel
+          roomId={room.id}
+          canClearHistory={isOwner}
+        />
+      );
     return <AIAssistant />;
   };
 

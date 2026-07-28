@@ -248,6 +248,9 @@ export const executeApi = {
     });
     return { items: res.data?.executions ?? [], meta: res.meta };
   },
+
+  clearHistory: (roomId: string): Promise<ApiResponse<{ cleared: number }>> =>
+    request({ method: "DELETE", url: `/api/execute/history/${roomId}` }),
 };
 
 export const aiApi = {

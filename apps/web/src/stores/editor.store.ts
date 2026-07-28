@@ -52,6 +52,8 @@ interface EditorState {
   }) => void;
   addExecution: (execution: Execution) => void;
   setExecutionHistory: (history: Execution[]) => void;
+  clearExecutionOutput: () => void;
+  clearExecutionHistory: () => void;
 
   setAiSuggestion: (suggestion: string | null) => void;
 
@@ -110,6 +112,9 @@ export const useEditorStore = create<EditorState>((set) => ({
       executionHistory: [execution, ...state.executionHistory].slice(0, 50),
     })),
   setExecutionHistory: (history) => set({ executionHistory: history }),
+  clearExecutionOutput: () =>
+    set({ executionOutput: null, executionError: null }),
+  clearExecutionHistory: () => set({ executionHistory: [] }),
 
   setAiSuggestion: (suggestion) => set({ aiSuggestion: suggestion }),
 
