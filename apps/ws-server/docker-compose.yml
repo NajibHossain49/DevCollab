@@ -45,6 +45,12 @@ services:
     privileged: true
     ports:
       - "2000:2000"
+    # Raise the per-request timeout ceilings above what the ws-server sends
+    # (run 5s / compile 10s); Piston's defaults (run 3s) otherwise reject the
+    # request with HTTP 400 "run_timeout cannot exceed the configured limit".
+    environment:
+      PISTON_RUN_TIMEOUT: "15000"
+      PISTON_COMPILE_TIMEOUT: "20000"
     volumes:
       - piston_data:/piston
     tmpfs:

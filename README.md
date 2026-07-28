@@ -90,16 +90,14 @@ flowchart LR
 - **Node.js 20+** and **npm**
 - **PostgreSQL** (default dev connection uses port **5433**)
 - **Redis** (default `redis://localhost:6379`)
-- Optional: a **Piston** endpoint (code execution; defaults to the public dev instance) and a **Groq API key** (AI features)
+- A **Piston** engine for code execution (the public emkc.org instance is whitelist-only now, so self-host — see [Code execution](#code-execution-piston)) and, optionally, a **Groq API key** (AI features)
 - A **GitHub OAuth app** (Authorization callback URL: `http://localhost:3000/api/auth/callback/github`)
 
-You can start Postgres and Redis quickly with Docker:
+Start Postgres, Redis, and Piston together with Docker Compose:
 
 ```bash
-docker run -d --name devcollab-pg -p 5433:5432 \
-  -e POSTGRES_USER=devcollab -e POSTGRES_PASSWORD=devcollab -e POSTGRES_DB=devcollab postgres:16
-
-docker run -d --name devcollab-redis -p 6379:6379 redis:7
+cd apps/ws-server
+docker compose up -d   # postgres :5433, redis :6379, piston :2000
 ```
 
 ---
@@ -167,9 +165,48 @@ On startup both processes log a matching **auth secret fingerprint** (a short SH
 | `NEXTAUTH_SECRET`                     | ✅       | Token secret — **must equal web `AUTH_SECRET`**   |
 | `NEXTAUTH_URL`                        | ✅       | Server base URL                                   |
 | `PORT`                                | ➖       | Server port (default `3001`)                      |
-| `PISTON_API_URL`                      | ➖       | Piston code-execution base URL (has a default)    |
+| `PISTON_API_URL`                      | ➖       | Piston base URL (default `http://localhost:2000`) |
 | `GROQ_API_KEY`                        | ➖       | AI completions / explain (leave empty to disable) |
 | `LOG_LEVEL`                           | ➖       | `debug` \| `info` \| `warn` \| `error`            |
+
+---
+
+## Code execution (Piston)
+
+Code runs on a [Piston](https://github.com/engineer-man/piston) engine. The
+public `emkc.org` instance became **whitelist-only on 2026-02-15** and now
+returns HTTP 401 on `/execute`, so DevCollab runs its own Piston container
+(defined in `apps/ws-server/docker-compose.yml`) and `PISTON_API_URL` points at
+`http://localhost:2000`.
+
+A fresh Piston has **no languages installed** — install the runtimes you need
+via its package API (each runs once and persists in the `piston_data` volume):
+
+```bash
+install() { curl -s -X POST http://localhost:2000/api/v2/packages \
+  -H 'Content-Type: application/json' -d "{\"language\":\"$1\",\"version\":\"$2\"}"; echo; }
+
+install node 20.11.1        # javascript
+install typescript 5.0.3    # typescript
+install python 3.9.4        # python
+install java 15.0.2         # java
+install gcc 10.2.0          # c++
+install go 1.16.2           # go
+install rust 1.68.2         # rust
+
+# Verify what's installed / discover other versions:
+curl -s http://localhost:2000/api/v2/runtimes
+curl -s http://localhost:2000/api/v2/packages
+```
+
+The ws-server sends a 5s run / 10s compile timeout; the container raises
+Piston's ceilings accordingly (`PISTON_RUN_TIMEOUT` / `PISTON_COMPILE_TIMEOUT`
+in the compose file) — without that Piston rejects the request with
+`HTTP 400 run_timeout cannot exceed the configured limit`.
+
+**In production**, run Piston on your own infrastructure (a privileged Docker
+container or a dedicated host) and set `PISTON_API_URL` to that instance's URL.
+No code changes are needed — the URL is read entirely from the environment.
 
 ---
 
