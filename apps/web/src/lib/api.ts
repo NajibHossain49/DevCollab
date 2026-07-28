@@ -89,7 +89,7 @@ async function request<T>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
   return response.data;
 }
 
-interface Paginated<T> {
+export interface Paginated<T> {
   items: T[];
   meta: PaginationMeta | undefined;
 }

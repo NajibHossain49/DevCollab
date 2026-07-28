@@ -54,8 +54,11 @@ export interface Room {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  // Present only on detail responses (GET /api/rooms/:slug).
   owner?: User;
   members?: RoomMember[];
+  // Aggregate count returned by some endpoints; absent on the bare list view.
+  _count?: { members: number };
 }
 
 export interface RoomMember {
@@ -63,7 +66,9 @@ export interface RoomMember {
   roomId: string;
   userId: string;
   role: MemberRole;
-  createdAt: string;
+  // The API returns `joinedAt`; `createdAt` is kept for backwards compatibility.
+  joinedAt?: string;
+  createdAt?: string;
   user?: User;
 }
 
@@ -132,3 +137,17 @@ export interface PaginationParams {
   limit?: number;
   search?: string;
 }
+
+// Languages supported by the code-execution backend (mirrors Judge0 mapping in
+// the SRS). Used by the create-room form and language badges.
+export const SUPPORTED_LANGUAGES = [
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "go", label: "Go" },
+  { value: "rust", label: "Rust" },
+] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]["value"];
