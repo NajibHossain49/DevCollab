@@ -45,7 +45,7 @@ devcollab/
 | Auth (web)      | Auth.js / NextAuth v5 (GitHub OAuth), `jose` for WS tokens        |
 | Backend         | Node.js 20+, Express, `ws` (WebSocket), TypeScript (strict)       |
 | Persistence     | PostgreSQL + Prisma, Redis                                        |
-| Execution / AI  | Piston, Groq / Ollama                                             |
+| Execution / AI  | Piston, Groq                                                      |
 | Tooling         | Turborepo, tsup, tsx, Pino                                        |
 
 ---
@@ -68,7 +68,7 @@ flowchart LR
     DB[(PostgreSQL)]
     RD[(Redis)]
     J0[Piston]
-    AI[Groq / Ollama]
+    AI[Groq]
 
     UI -- REST: rooms, executions, AI --> REST
     Y -- DOC_UPDATE / DOC_SYNC (JSON) --> WS
@@ -90,7 +90,7 @@ flowchart LR
 - **Node.js 20+** and **npm**
 - **PostgreSQL** (default dev connection uses port **5433**)
 - **Redis** (default `redis://localhost:6379`)
-- Optional: a **Piston** endpoint (code execution; defaults to the public dev instance) and **Groq API key** or a local **Ollama** (AI features)
+- Optional: a **Piston** endpoint (code execution; defaults to the public dev instance) and a **Groq API key** (AI features)
 - A **GitHub OAuth app** (Authorization callback URL: `http://localhost:3000/api/auth/callback/github`)
 
 You can start Postgres and Redis quickly with Docker:
@@ -168,8 +168,7 @@ On startup both processes log a matching **auth secret fingerprint** (a short SH
 | `NEXTAUTH_URL`                        | ✅       | Server base URL                                   |
 | `PORT`                                | ➖       | Server port (default `3001`)                      |
 | `PISTON_API_URL`                      | ➖       | Piston code-execution base URL (has a default)    |
-| `GROQ_API_KEY`                        | ➖       | AI completions/explain (or use Ollama)            |
-| `OLLAMA_URL`                          | ➖       | Local AI fallback (default `http://localhost:11434`) |
+| `GROQ_API_KEY`                        | ➖       | AI completions / explain (leave empty to disable) |
 | `LOG_LEVEL`                           | ➖       | `debug` \| `info` \| `warn` \| `error`            |
 
 ---
