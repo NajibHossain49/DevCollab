@@ -9,6 +9,7 @@ import type {
 } from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 
+import { ExplanationView } from "@/components/ai/ExplanationView";
 import { useEditorInstance } from "@/components/editor/editor-context";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -231,11 +232,11 @@ export function AIAssistant() {
 
         {explanation ? (
           <section>
-            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Explanation
             </h3>
-            <div className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-3 text-sm">
-              {explanation}
+            <div className="rounded-lg border border-border bg-card p-4">
+              <ExplanationView text={explanation} />
             </div>
           </section>
         ) : null}

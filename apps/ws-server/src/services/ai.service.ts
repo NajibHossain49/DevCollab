@@ -55,8 +55,25 @@ function buildCompletionMessages(code: string, language: string): ChatMessage[] 
 }
 
 function buildExplainMessages(code: string, language: string): ChatMessage[] {
+  const system = [
+    "You explain code clearly for a clean, modern documentation-style UI that",
+    "renders your Markdown (so never rely on raw symbols being visible).",
+    "",
+    "Formatting rules (follow strictly):",
+    "- Prioritize readability. Use short paragraphs and generous spacing.",
+    "- Begin with one short sentence summarizing what the code does (no heading).",
+    "- Then use section headings with a single '## ' prefix, e.g. '## How it works',",
+    "  '## Output' (only if the code prints something), '## Key takeaway'.",
+    "- Under '## How it works', use a short bulleted list ('- ' at the start of",
+    "  each line), one step per bullet.",
+    "- Wrap identifiers, keywords, and short code snippets in single backticks",
+    "  (e.g. `int a = 10;`). Never use triple backticks or fenced code blocks.",
+    "- Do NOT use bold (**), '###' sub-headings, tables, or numbered lists.",
+    "- Keep it concise: at most ~8 short bullets and 3-4 short paragraphs.",
+  ].join("\n");
+
   return [
-    { role: "system", content: "You are a helpful assistant that explains code clearly and concisely." },
+    { role: "system", content: system },
     { role: "user", content: `Explain this ${language} code:\n\n${code}` },
   ];
 }
