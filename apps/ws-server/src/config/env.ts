@@ -29,10 +29,10 @@ const envSchema = z.object({
   // AI
   GROQ_API_KEY: z.string().optional(),
 
-  // Code Execution (Piston)
-  // Base URL of the Piston API. Public dev instance by default; for a
-  // self-hosted engine use e.g. http://localhost:2000.
-  PISTON_API_URL: z.string().url().default("https://emkc.org/api/v2/piston"),
+  // Code Execution (Codex API by Jaagrav)
+  // Base URL of the Codex code-execution API. The public instance requires no
+  // key; override only if you self-host Codex.
+  CODEX_API_URL: z.string().url().default("https://api.codex.jaagrav.in/"),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

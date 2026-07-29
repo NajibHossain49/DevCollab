@@ -78,6 +78,6 @@ services:
       # Optional: Groq API key for AI features (leave unset to disable).
       - key: GROQ_API_KEY
         sync: false
-      # Code execution engine (self-hosted Piston recommended in production).
-      - key: PISTON_API_URL
-        value: https://emkc.org/api/v2/piston
+      # Code execution engine (Codex API by Jaagrav; public instance, no key).
+      - key: CODEX_API_URL
+        value: https://api.codex.jaagrav.in/

@@ -1,0 +1,16 @@
+{
+  "name": "devcollab-codex-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted code-execution API (CodeX-compatible) for DevCollab",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "uuid": "^9.0.1"
+  }
+}
