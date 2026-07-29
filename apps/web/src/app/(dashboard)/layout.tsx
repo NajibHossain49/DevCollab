@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { WarmupManager } from "@/components/providers/WarmupManager";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,6 +32,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <WarmupManager />
       <Navbar onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="flex min-h-0 flex-1">
         <Sidebar
