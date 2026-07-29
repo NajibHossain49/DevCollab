@@ -9,6 +9,8 @@ const {
   executeCorCPP,
   executeJavaScript,
   executeGo,
+  executeTypeScript,
+  executeRust,
 } = require("./executeCode");
 
 const app = express();
@@ -19,14 +21,15 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cors());
 
 // Language slug -> runner. Matches the slugs the ws-server sends
-// (js, py, java, cpp, go). TypeScript is mapped to js upstream; Rust is
-// rejected upstream and is not handled here.
+// (js, ts, py, java, cpp, go, rs).
 const RUNNERS = {
   py: executePython,
   js: executeJavaScript,
+  ts: executeTypeScript,
   java: executeJava,
   cpp: executeCorCPP,
   go: executeGo,
+  rs: executeRust,
 };
 
 // Always responds with the CodeX-compatible shape the ws-server expects:

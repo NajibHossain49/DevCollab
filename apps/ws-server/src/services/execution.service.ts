@@ -5,15 +5,17 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError, DatabaseError } from "../utils/errors.js";
 
-// Maps our language keys to Codex language slugs. Codex does not support
-// TypeScript (run as JavaScript) or Rust; unmapped languages are rejected.
+// Maps our language keys to the code-execution service's language slugs.
+// TypeScript is transpiled and run server-side (slug "ts"); Rust is compiled
+// with rustc (slug "rs"). Unmapped languages are rejected.
 const CODEX_LANGUAGES: Record<string, string> = {
   javascript: "js",
-  typescript: "js",
+  typescript: "ts",
   python: "py",
   java: "java",
   cpp: "cpp",
   go: "go",
+  rust: "rs",
 };
 
 // Abort the request if Codex takes longer than this (it can be slow / cold).

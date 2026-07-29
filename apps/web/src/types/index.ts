@@ -138,9 +138,9 @@ export interface PaginationParams {
   search?: string;
 }
 
-// Languages supported by the code-execution backend (mapped to Codex language
-// slugs server-side). Used by the create-room form and language badges.
-// Note: Codex runs TypeScript as JavaScript and does not support Rust.
+// Languages supported by the code-execution backend (mapped to execution-API
+// language slugs server-side). Used by the create-room form and language
+// badges. TypeScript is transpiled server-side (types stripped, not checked).
 export const SUPPORTED_LANGUAGES = [
   { value: "javascript", label: "JavaScript" },
   { value: "typescript", label: "TypeScript" },

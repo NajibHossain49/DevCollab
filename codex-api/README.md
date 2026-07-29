@@ -16,11 +16,11 @@ such as Render, Railway, or Fly.io.
 
 Body (`application/x-www-form-urlencoded` or JSON):
 
-| Field      | Description                                              |
-| ---------- | -------------------------------------------------------- |
-| `code`     | Source code to execute (required)                        |
-| `language` | Language slug: `py`, `js`, `java`, `cpp`, `go` (required)|
-| `input`    | Optional stdin passed to the program                     |
+| Field      | Description                                                        |
+| ---------- | ------------------------------------------------------------------ |
+| `code`     | Source code to execute (required)                                  |
+| `language` | Language slug: `py`, `js`, `ts`, `java`, `cpp`, `go`, `rs` (required)|
+| `input`    | Optional stdin passed to the program                               |
 
 Response (JSON):
 
@@ -37,17 +37,17 @@ Simple liveness/uptime probe.
 
 ## Supported languages
 
-| Slug   | Toolchain            |
-| ------ | -------------------- |
-| `py`   | python3              |
-| `js`   | node 20              |
-| `java` | default-jdk (Java 17)|
-| `cpp`  | g++                  |
-| `go`   | golang-go            |
+| Slug   | Toolchain              |
+| ------ | ---------------------- |
+| `py`   | python3                |
+| `js`   | node 20                |
+| `ts`   | tsx (esbuild, no type-check) |
+| `java` | default-jdk (Java 17)  |
+| `cpp`  | g++                    |
+| `go`   | golang-go              |
+| `rs`   | rustc                  |
 
-> The DevCollab web app also lists TypeScript (run as `js`) and Rust. Rust is
-> **not** supported here and is rejected by the ws-server before it reaches
-> this service.
+> TypeScript is transpiled and run (types are stripped, not type-checked).
 
 ## Local run
 

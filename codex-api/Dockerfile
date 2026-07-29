@@ -3,12 +3,15 @@
 FROM node:20-bookworm
 
 # g++ (C/C++), python3 (Python), default-jdk (Java 17, source-file mode),
-# golang-go (Go). ca-certificates for outbound TLS.
+# golang-go (Go), rustc (Rust; uses gcc from g++ as its linker).
+# TypeScript runs via the tsx dependency (installed with npm). ca-certificates
+# for outbound TLS.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       g++ \
       python3 \
       default-jdk \
       golang-go \
+      rustc \
       ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
