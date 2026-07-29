@@ -28,8 +28,10 @@ services:
     rootDir: .
     branch: main
 
+    # NODE_ENV=production makes npm skip devDependencies, but the build tools
+    # (tsup, typescript, turbo) live in devDependencies — so force them in.
     buildCommand: >-
-      npm ci &&
+      npm ci --include=dev &&
       npx prisma generate --schema=apps/ws-server/prisma/schema.prisma &&
       npx turbo run build --filter=@devcollab/ws-server
 
