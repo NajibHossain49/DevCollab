@@ -111,9 +111,19 @@ async function handleConnection(ws: WebSocket, req: IncomingMessage): Promise<vo
   });
 }
 
+// Holds the active WebSocket server so other modules (e.g. the /health
+// endpoint) can report its status without a direct reference.
+let wssInstance: WebSocketServer | null = null;
+
+// Returns the running WebSocket server, or null before it has been set up.
+export function getWebSocketServer(): WebSocketServer | null {
+  return wssInstance;
+}
+
 // Attaches a WebSocket server (path /ws) to an existing HTTP server.
 export function setupWebSocketServer(server: Server): WebSocketServer {
   const wss = new WebSocketServer({ server, path: "/ws" });
+  wssInstance = wss;
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     void handleConnection(ws, req);
@@ -155,6 +165,7 @@ export function setupWebSocketServer(server: Server): WebSocketServer {
     for (const [, conn] of connectionManager.getConnectionEntries()) {
       conn.ws.terminate();
     }
+    wssInstance = null;
     logger.info("WebSocket server closed");
   });
 

@@ -18,6 +18,10 @@ const envSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(32),
   NEXTAUTH_URL: z.string().url(),
 
+  // Additional browser origins allowed by CORS, comma-separated. Used for the
+  // deployed frontend URL(s), e.g. the Vercel domain(s).
+  CORS_ORIGINS: z.string().optional(),
+
   // Server
   PORT: z.coerce.number().int().positive().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),

@@ -18,10 +18,83 @@ import { errorHandler } from "./middleware/error-handler.js";
 import apiRouter from "./routes/index.js";
 import type { ApiResponse } from "./types/index.js";
 import { connectionManager, sendMessage } from "./websocket/connection.js";
-import { setupWebSocketServer } from "./websocket/server.js";
+import { getWebSocketServer, setupWebSocketServer } from "./websocket/server.js";
 
 // How long to wait for in-flight work before forcing exit during shutdown.
 const SHUTDOWN_TIMEOUT_MS = 10_000;
+
+// Cap each dependency probe so a hung dependency can't stall the health check.
+const HEALTH_CHECK_TIMEOUT_MS = 3_000;
+
+type DependencyStatus = "up" | "down";
+
+interface HealthReport {
+  status: "ok" | "degraded";
+  timestamp: string;
+  uptimeSeconds: number;
+  services: {
+    database: DependencyStatus;
+    redis: DependencyStatus;
+    websocket: DependencyStatus;
+  };
+  connections: number;
+  // HTTP status the endpoint should return. Database and the WebSocket server
+  // are critical (503 when down). Redis backs rate limiting only, so a Redis
+  // outage is reported as "degraded" but still returns 200 to avoid the
+  // platform restarting an otherwise-serving instance on a transient blip.
+  httpStatus: 200 | 503;
+}
+
+// Rejects if the probe takes longer than HEALTH_CHECK_TIMEOUT_MS.
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) => {
+      setTimeout(() => reject(new Error(`${label} health check timed out`)), HEALTH_CHECK_TIMEOUT_MS).unref();
+    }),
+  ]);
+}
+
+async function checkDatabase(): Promise<DependencyStatus> {
+  try {
+    await withTimeout(prisma.$queryRaw`SELECT 1`, "database");
+    return "up";
+  } catch (error) {
+    logger.warn({ error }, "Database health check failed");
+    return "down";
+  }
+}
+
+async function checkRedis(): Promise<DependencyStatus> {
+  try {
+    const pong = await withTimeout(redis.ping(), "redis");
+    return pong === "PONG" ? "up" : "down";
+  } catch (error) {
+    logger.warn({ error }, "Redis health check failed");
+    return "down";
+  }
+}
+
+function checkWebSocket(): DependencyStatus {
+  return getWebSocketServer() ? "up" : "down";
+}
+
+async function buildHealthReport(): Promise<HealthReport> {
+  const [database, redisStatus] = await Promise.all([checkDatabase(), checkRedis()]);
+  const websocket = checkWebSocket();
+
+  const allUp = database === "up" && redisStatus === "up" && websocket === "up";
+  const criticalUp = database === "up" && websocket === "up";
+
+  return {
+    status: allUp ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.round(process.uptime()),
+    services: { database, redis: redisStatus, websocket },
+    connections: connectionManager.getConnectionCount(),
+    httpStatus: criticalUp ? 200 : 503,
+  };
+}
 
 function buildApp(): Express {
   const app = express();
@@ -51,9 +124,14 @@ function buildApp(): Express {
     next();
   });
 
-  // 5. Health check.
+  // 5. Health check — reports database, Redis, and WebSocket server status.
+  // Returns 200 when everything is up, 503 when any dependency is down so
+  // platform health probes (Render) can react appropriately.
   app.get("/health", (_req: Request, res: Response): void => {
-    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+    void buildHealthReport().then((report) => {
+      const { httpStatus, ...body } = report;
+      res.status(httpStatus).json(body);
+    });
   });
 
   // 6. API routes.

@@ -1,0 +1,81 @@
+# ==============================================================================
+# DevCollab ws-server — Render Blueprint
+# ------------------------------------------------------------------------------
+# Deploy the Express + WebSocket backend on Render as a single web service.
+#
+# Usage:
+#   1. Push this repo to GitHub.
+#   2. Render Dashboard -> New -> Blueprint -> pick this repo.
+#      (Render auto-detects render.yaml; if it lives in a subfolder, set the
+#       Blueprint path to apps/ws-server/render.yaml.)
+#   3. Fill in the env vars marked `sync: false` (see DEPLOYMENT.md).
+#
+# Notes:
+#   - Commands run from the repo ROOT (monorepo). Turbo builds the workspace
+#     dependency (@devcollab/shared-types) before the ws-server.
+#   - Render injects PORT automatically; the app reads it via env.PORT.
+#   - Provision Postgres (Neon) and Redis (Upstash) separately, then paste their
+#     connection strings into DATABASE_URL / REDIS_URL.
+# ==============================================================================
+
+services:
+  - type: web
+    name: devcollab-ws-server
+    runtime: node
+    plan: free
+    region: oregon
+    # Only redeploy when backend-relevant files change.
+    rootDir: .
+    branch: main
+
+    buildCommand: >-
+      npm ci &&
+      npx prisma generate --schema=apps/ws-server/prisma/schema.prisma &&
+      npx turbo run build --filter=@devcollab/ws-server
+
+    # Apply pending DB migrations before the new version goes live.
+    preDeployCommand: >-
+      npx prisma migrate deploy --schema=apps/ws-server/prisma/schema.prisma
+
+    startCommand: npm run start --workspace=@devcollab/ws-server
+
+    healthCheckPath: /health
+
+    autoDeploy: true
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
+      # PostgreSQL connection string (Neon). Include ?sslmode=require.
+      - key: DATABASE_URL
+        sync: false
+      # Redis connection string (Upstash). Use the rediss:// TLS URL.
+      - key: REDIS_URL
+        sync: false
+
+      # JWT/session secret — MUST match the web app's AUTH_SECRET (>= 32 chars).
+      - key: NEXTAUTH_SECRET
+        sync: false
+      # This service's own public base URL, e.g. https://devcollab-ws-server.onrender.com
+      - key: NEXTAUTH_URL
+        sync: false
+      # Comma-separated allowed browser origins (the deployed Vercel frontend),
+      # e.g. https://devcollab.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+
+      # GitHub OAuth app credentials.
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+
+      # Optional: Groq API key for AI features (leave unset to disable).
+      - key: GROQ_API_KEY
+        sync: false
+      # Code execution engine (self-hosted Piston recommended in production).
+      - key: PISTON_API_URL
+        value: https://emkc.org/api/v2/piston
