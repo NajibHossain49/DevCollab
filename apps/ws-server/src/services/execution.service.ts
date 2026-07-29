@@ -18,8 +18,10 @@ const CODEX_LANGUAGES: Record<string, string> = {
   rust: "rs",
 };
 
-// Abort the request if Codex takes longer than this (it can be slow / cold).
-const REQUEST_TIMEOUT_MS = 20_000;
+// Abort the request if the execution service takes longer than this. Kept high
+// because a free-tier host can take ~30-60s to cold-start from sleep before it
+// even begins running the code.
+const REQUEST_TIMEOUT_MS = 75_000;
 
 interface CodexResponse {
   timeStamp?: number;

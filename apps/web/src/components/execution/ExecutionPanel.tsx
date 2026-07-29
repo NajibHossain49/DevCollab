@@ -40,6 +40,18 @@ export function ExecutionPanel({
 
   const [clearingHistory, setClearingHistory] = useState(false);
   const [clearError, setClearError] = useState<string | null>(null);
+  // After a few seconds of "Running…", assume the free-tier runner is cold and
+  // show a reassuring message instead of an unexplained wait.
+  const [wakingUp, setWakingUp] = useState(false);
+
+  useEffect(() => {
+    if (!isExecuting) {
+      setWakingUp(false);
+      return;
+    }
+    const timer = setTimeout(() => setWakingUp(true), 4000);
+    return () => clearTimeout(timer);
+  }, [isExecuting]);
 
   useEffect(() => {
     let cancelled = false;
@@ -157,6 +169,16 @@ export function ExecutionPanel({
           <pre className="min-h-16 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-3 font-mono text-xs">
             {isExecuting ? "Running…" : (output ?? "—")}
           </pre>
+          {isExecuting && wakingUp ? (
+            <p className="mt-2 flex items-start gap-2 rounded-md bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+              <Spinner className="mt-0.5 size-3.5 shrink-0" />
+              <span>
+                Waking up the code runner… free servers sleep when idle, so the
+                first run after a break can take up to a minute. Hang tight — it
+                will run automatically.
+              </span>
+            </p>
+          ) : null}
           {error ? (
             <pre className="mt-2 whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-3 font-mono text-xs text-destructive">
               {error}

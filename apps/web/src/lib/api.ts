@@ -233,9 +233,48 @@ export const roomsApi = {
     request({ method: "DELETE", url: `/api/rooms/${slug}/members/${userId}` }),
 };
 
+// A free-tier backend can take ~30-60s to cold-start from sleep, so give code
+// execution a long timeout before giving up.
+const EXECUTION_TIMEOUT_MS = 90_000;
+
+// Errors that typically mean the server is asleep/starting rather than a real
+// failure: no response (network/timeout) or a gateway status from the platform.
+function isColdStartError(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  return (
+    err.status === 0 ||
+    err.status === 502 ||
+    err.status === 503 ||
+    err.status === 504
+  );
+}
+
+// Retries `fn` a few times when the failure looks like a cold start, with a
+// short increasing backoff. Non-cold-start errors are rethrown immediately.
+async function retryOnColdStart<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (!isColdStartError(err) || attempt === retries) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export const executeApi = {
   run: (data: ExecuteCodeInput): Promise<ApiResponse<{ execution: Execution }>> =>
-    request({ method: "POST", url: "/api/execute", data }),
+    retryOnColdStart(() =>
+      request({
+        method: "POST",
+        url: "/api/execute",
+        data,
+        timeout: EXECUTION_TIMEOUT_MS,
+      }),
+    ),
 
   history: async (
     roomId: string,
