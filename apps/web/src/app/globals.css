@@ -93,11 +93,133 @@
     outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+}
+
+/* Lenis smooth scroll (mounted only on marketing pages via <SmoothScroll />).
+   When active, Lenis adds these classes to <html>; the rules keep native
+   scroll-behavior out of its way and prevent height/iframe issues. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Landing-page motion: scroll reveals, floating art, animated gradients.
+   All effects are disabled under prefers-reduced-motion (see below).
+--------------------------------------------------------------------------- */
+@layer utilities {
+  /* Scroll-reveal: hidden until the <Reveal> wrapper marks it visible. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Slow vertical bob for hero artwork. */
+  .animate-float {
+    animation: float 7s ease-in-out infinite;
+  }
+
+  /* Panning gradient for headline text (pair with a 200% background-size). */
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradient-pan 6s linear infinite;
+  }
+
+  /* Soft pulsing glow for ambient blobs. */
+  .animate-glow {
+    animation: glow-pulse 8s ease-in-out infinite;
+  }
+
+  /* Faint dotted grid backdrop, faded out toward the edges. */
+  .bg-grid {
+    background-image: radial-gradient(
+      color-mix(in oklch, var(--color-muted-foreground) 22%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes gradient-pan {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.28;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .animate-float,
+  .animate-gradient,
+  .animate-glow {
+    animation: none;
   }
 }
 
