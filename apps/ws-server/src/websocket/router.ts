@@ -4,6 +4,14 @@ import { handleCursorMove, handleUserTyping } from "./handlers/awareness.handler
 import { handleChatMessage } from "./handlers/chat.handler.js";
 import { handleDocUpdate, handleRequestDocSync } from "./handlers/document.handler.js";
 import { handleJoinRoom, handleLeaveRoom } from "./handlers/room.handler.js";
+import {
+  handleCallUser,
+  handleIceCandidate,
+  handleLeaveCall,
+  handleRtcAnswer,
+  handleRtcOffer,
+  handleToggleMedia,
+} from "./handlers/webrtc.handler.js";
 import { clientMessageSchema } from "./types.js";
 
 // Parses, validates, and dispatches an incoming WebSocket message.
@@ -51,6 +59,24 @@ export async function routeMessage(connId: string, conn: Connection, raw: string
         break;
       case "CHAT_MESSAGE":
         await handleChatMessage(connId, conn, message.payload);
+        break;
+      case "CALL_USER":
+        handleCallUser(connId, conn, message.payload);
+        break;
+      case "LEAVE_CALL":
+        handleLeaveCall(connId, conn, message.payload);
+        break;
+      case "RTC_OFFER":
+        handleRtcOffer(connId, conn, message.payload);
+        break;
+      case "RTC_ANSWER":
+        handleRtcAnswer(connId, conn, message.payload);
+        break;
+      case "ICE_CANDIDATE":
+        handleIceCandidate(connId, conn, message.payload);
+        break;
+      case "TOGGLE_MEDIA":
+        handleToggleMedia(connId, conn, message.payload);
         break;
       default:
         sendMessage(conn.ws, {

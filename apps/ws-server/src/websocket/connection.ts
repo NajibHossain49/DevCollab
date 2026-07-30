@@ -88,6 +88,26 @@ export class ConnectionManager {
     logger.debug({ roomId, type: message.type, delivered }, "broadcast");
   }
 
+  // Relays a message to every connection of a specific user within a room.
+  // Used for targeted WebRTC signaling (offers/answers/ICE candidates). Returns
+  // the number of sockets the message was delivered to.
+  sendToRoomUser(roomId: string, targetUserId: string, message: WebSocketMessage): number {
+    const members = this._roomConnections.get(roomId);
+    if (!members) {
+      return 0;
+    }
+
+    let delivered = 0;
+    for (const connId of members) {
+      const conn = this._connections.get(connId);
+      if (conn && conn.userId === targetUserId) {
+        sendMessage(conn.ws, message);
+        delivered += 1;
+      }
+    }
+    return delivered;
+  }
+
   getRoomMembers(roomId: string): Connection[] {
     const members = this._roomConnections.get(roomId);
     if (!members) {

@@ -9,6 +9,7 @@ import {
 } from "react";
 import * as Y from "yjs";
 
+import type { CollabProvider } from "@/lib/collab-provider";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import type {
   ConnectionStatus,
@@ -21,6 +22,8 @@ interface YjsContextValue {
   /** Shared code text; both peers bind to the "code" Y.Text (server uses it). */
   yText: Y.Text;
   status: ConnectionStatus;
+  /** Live signaling channel; also carries WebRTC offers/answers/ICE. */
+  provider: CollabProvider | null;
   sendChat: (content: string) => void;
   sendCursor: (position: Position, selection?: Selection) => void;
   sendTyping: (isTyping: boolean) => void;
@@ -39,7 +42,7 @@ export function YjsProvider({
 }) {
   const [doc] = useState(() => new Y.Doc());
 
-  const { status, sendChat, sendCursor, sendTyping } = useWebSocket({
+  const { status, provider, sendChat, sendCursor, sendTyping } = useWebSocket({
     roomId,
     doc,
     enabled: Boolean(roomId),
@@ -50,11 +53,12 @@ export function YjsProvider({
       doc,
       yText: doc.getText("code"),
       status,
+      provider,
       sendChat,
       sendCursor,
       sendTyping,
     }),
-    [doc, status, sendChat, sendCursor, sendTyping],
+    [doc, status, provider, sendChat, sendCursor, sendTyping],
   );
 
   return <YjsContext.Provider value={value}>{children}</YjsContext.Provider>;

@@ -22,6 +22,34 @@ export interface AwarenessUser {
 }
 
 // ---------------------------------------------------------------------------
+// WebRTC signaling shapes (mirror packages/shared-types/src/webrtc.ts)
+// ---------------------------------------------------------------------------
+export interface SessionDescription {
+  type: "offer" | "answer" | "pranswer" | "rollback";
+  sdp?: string;
+}
+
+export interface IceCandidate {
+  candidate: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
+  usernameFragment?: string | null;
+}
+
+export interface MediaState {
+  audio: boolean;
+  video: boolean;
+  screen: boolean;
+}
+
+export interface CallParticipant {
+  id: string;
+  name: string;
+  avatar?: string;
+  color?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Client -> Server
 // ---------------------------------------------------------------------------
 export type ClientMessage =
@@ -34,7 +62,23 @@ export type ClientMessage =
     }
   | { type: "USER_TYPING"; payload: { roomId: string; isTyping: boolean } }
   | { type: "CHAT_MESSAGE"; payload: { roomId: string; content: string } }
-  | { type: "REQUEST_DOC_SYNC"; payload: { roomId: string } };
+  | { type: "REQUEST_DOC_SYNC"; payload: { roomId: string } }
+  // --- WebRTC signaling ---
+  | { type: "CALL_USER"; payload: { roomId: string } & Partial<MediaState> }
+  | { type: "LEAVE_CALL"; payload: { roomId: string } }
+  | {
+      type: "RTC_OFFER";
+      payload: { roomId: string; targetUserId: string; sdp: SessionDescription };
+    }
+  | {
+      type: "RTC_ANSWER";
+      payload: { roomId: string; targetUserId: string; sdp: SessionDescription };
+    }
+  | {
+      type: "ICE_CANDIDATE";
+      payload: { roomId: string; targetUserId: string; candidate: IceCandidate };
+    }
+  | { type: "TOGGLE_MEDIA"; payload: { roomId: string } & MediaState };
 
 // ---------------------------------------------------------------------------
 // Server -> Client
@@ -90,6 +134,40 @@ export interface ErrorMessage {
   payload: { code: string; message: string };
 }
 
+// --- WebRTC signaling (server -> client) ------------------------------------
+export interface UserJoinedCallMessage {
+  type: "USER_JOINED_CALL";
+  payload: {
+    user: { id: string; name: string; avatar?: string; color: string };
+    media: MediaState;
+  };
+}
+
+export interface UserLeftCallMessage {
+  type: "USER_LEFT_CALL";
+  payload: { userId: string };
+}
+
+export interface RtcOfferMessage {
+  type: "RTC_OFFER";
+  payload: { fromUserId: string; fromName: string; fromAvatar?: string; sdp: SessionDescription };
+}
+
+export interface RtcAnswerMessage {
+  type: "RTC_ANSWER";
+  payload: { fromUserId: string; sdp: SessionDescription };
+}
+
+export interface IceCandidateMessage {
+  type: "ICE_CANDIDATE";
+  payload: { fromUserId: string; candidate: IceCandidate };
+}
+
+export interface MediaStateChangedMessage {
+  type: "MEDIA_STATE_CHANGED";
+  payload: { userId: string } & MediaState;
+}
+
 export type ServerMessage =
   | UserJoinedMessage
   | UserLeftMessage
@@ -97,7 +175,13 @@ export type ServerMessage =
   | CursorUpdateMessage
   | AwarenessUpdateMessage
   | ChatMessageBroadcast
-  | ErrorMessage;
+  | ErrorMessage
+  | UserJoinedCallMessage
+  | UserLeftCallMessage
+  | RtcOfferMessage
+  | RtcAnswerMessage
+  | IceCandidateMessage
+  | MediaStateChangedMessage;
 
 // A remote peer's cursor as tracked on the client (derived from CURSOR_UPDATE).
 export interface RemoteCursor {

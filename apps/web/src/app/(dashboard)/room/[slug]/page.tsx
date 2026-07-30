@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { AIAssistant } from "@/components/ai/AIAssistant";
 import { LiveCursors } from "@/components/awareness/LiveCursors";
 import { TypingIndicator } from "@/components/awareness/TypingIndicator";
+import { CallPanel } from "@/components/call/CallPanel";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { EditorInstanceProvider } from "@/components/editor/editor-context";
 import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
@@ -205,6 +206,12 @@ export default function RoomPage() {
             </div>
           </div>
         ) : null}
+
+        {/* Floating WebRTC audio/video + screen-share overlay. Isolated so a
+            call error never takes down the editor. */}
+        <ErrorBoundary label="call" fallback={() => null}>
+          <CallPanel />
+        </ErrorBoundary>
       </EditorInstanceProvider>
     </YjsProvider>
   );

@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
     NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws",
+    // Optional TURN relay for WebRTC (STUN-only by default). See .env.example.
+    NEXT_PUBLIC_TURN_SERVER_URL: process.env.NEXT_PUBLIC_TURN_SERVER_URL ?? "",
+    NEXT_PUBLIC_TURN_USERNAME: process.env.NEXT_PUBLIC_TURN_USERNAME ?? "",
+    NEXT_PUBLIC_TURN_PASSWORD: process.env.NEXT_PUBLIC_TURN_PASSWORD ?? "",
   },
   webpack: (config) => {
     // y-monaco imports `monaco-editor/esm/vs/editor/editor.api.js` directly, but

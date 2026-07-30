@@ -3,9 +3,12 @@ import * as Y from "yjs";
 import type {
   ClientMessage,
   ConnectionStatus,
+  IceCandidate,
+  MediaState,
   Position,
   Selection,
   ServerMessage,
+  SessionDescription,
 } from "./ws-messages";
 
 interface CollabProviderOptions {
@@ -217,6 +220,36 @@ export class CollabProvider {
 
   sendChat(content: string): void {
     this._send({ type: "CHAT_MESSAGE", payload: { roomId: this._roomId, content } });
+  }
+
+  // -------------------------------------------------------------------------
+  // WebRTC signaling senders (multiplexed over the same socket)
+  // -------------------------------------------------------------------------
+  joinCall(media: Partial<MediaState>): void {
+    this._send({ type: "CALL_USER", payload: { roomId: this._roomId, ...media } });
+  }
+
+  leaveCall(): void {
+    this._send({ type: "LEAVE_CALL", payload: { roomId: this._roomId } });
+  }
+
+  sendOffer(targetUserId: string, sdp: SessionDescription): void {
+    this._send({ type: "RTC_OFFER", payload: { roomId: this._roomId, targetUserId, sdp } });
+  }
+
+  sendAnswer(targetUserId: string, sdp: SessionDescription): void {
+    this._send({ type: "RTC_ANSWER", payload: { roomId: this._roomId, targetUserId, sdp } });
+  }
+
+  sendIceCandidate(targetUserId: string, candidate: IceCandidate): void {
+    this._send({
+      type: "ICE_CANDIDATE",
+      payload: { roomId: this._roomId, targetUserId, candidate },
+    });
+  }
+
+  sendMediaState(media: MediaState): void {
+    this._send({ type: "TOGGLE_MEDIA", payload: { roomId: this._roomId, ...media } });
   }
 
   destroy(): void {

@@ -37,6 +37,7 @@ export function useWebSocket({
   enabled = true,
 }: UseWebSocketOptions): UseWebSocketResult {
   const providerRef = useRef<CollabProvider | null>(null);
+  const [provider, setProvider] = useState<CollabProvider | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
 
   const setConnectionStatus = useEditorStore((s) => s.setConnectionStatus);
@@ -88,6 +89,7 @@ export function useWebSocket({
       tokenProvider: fetchWsToken,
     });
     providerRef.current = provider;
+    setProvider(provider);
 
     const offStatus = provider.on("status", (next) => {
       setStatus(next);
@@ -102,6 +104,7 @@ export function useWebSocket({
       offMessage();
       provider.destroy();
       providerRef.current = null;
+      setProvider(null);
       reset();
     };
   }, [
@@ -130,7 +133,7 @@ export function useWebSocket({
 
   return {
     status,
-    provider: providerRef.current,
+    provider,
     sendChat,
     sendCursor,
     sendTyping,

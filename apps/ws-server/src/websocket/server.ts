@@ -51,6 +51,12 @@ async function cleanupConnection(connId: string, conn: Connection): Promise<void
       type: "USER_LEFT",
       payload: { userId: conn.userId, timestamp: new Date().toISOString() },
     });
+    // Ensure any peers in an active call tear down their connection to us even
+    // when the socket drops without an explicit LEAVE_CALL.
+    connectionManager.broadcastToRoom(roomId, {
+      type: "USER_LEFT_CALL",
+      payload: { userId: conn.userId },
+    });
 
     if (connectionManager.getRoomConnectionCount(roomId) === 0) {
       await documentManager.persistDocument(roomId).catch((error: unknown) => {
