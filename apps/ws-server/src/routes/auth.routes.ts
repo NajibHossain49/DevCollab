@@ -9,10 +9,19 @@ import { logger } from "../config/logger.js";
 import { verifyAuth } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rate-limit.js";
 import { validate } from "../middleware/validate.js";
-import { findOrCreateUser } from "../services/user.service.js";
+import {
+  findOrCreateUser,
+  registerUser,
+  verifyCredentials,
+} from "../services/user.service.js";
 import { asyncHandler, getUser } from "../utils/async-handler.js";
 import { UnauthorizedError } from "../utils/errors.js";
-import { githubCallbackSchema, signinSchema } from "../utils/validators.js";
+import {
+  githubCallbackSchema,
+  loginSchema,
+  registerSchema,
+  signinSchema,
+} from "../utils/validators.js";
 import type { ApiResponse } from "../types/index.js";
 
 const router = Router();
@@ -26,6 +35,14 @@ function signToken(user: Pick<User, "id" | "email" | "name">): string {
     env.NEXTAUTH_SECRET,
     { expiresIn: JWT_EXPIRES_IN },
   );
+}
+
+// Never leak the password hash to clients.
+type SafeUser = Omit<User, "passwordHash">;
+
+function toSafeUser(user: User): SafeUser {
+  const { passwordHash: _passwordHash, ...safe } = user;
+  return safe;
 }
 
 interface GithubProfile {
@@ -119,9 +136,50 @@ router.post(
 
     logger.info({ userId: user.id }, "GitHub OAuth callback succeeded");
 
-    const body: ApiResponse<{ user: User; token: string }> = {
+    const body: ApiResponse<{ user: SafeUser; token: string }> = {
       success: true,
-      data: { user, token },
+      data: { user: toSafeUser(user), token },
+    };
+    res.status(200).json(body);
+  }),
+);
+
+// POST /api/auth/register — creates an email/password account and returns a
+// JWT the client can use immediately for API/WebSocket auth.
+router.post(
+  "/register",
+  authLimiter,
+  validate(registerSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const input = registerSchema.parse(req.body);
+    const user = await registerUser(input);
+    const token = signToken(user);
+
+    logger.info({ userId: user.id }, "User registered with email/password");
+
+    const body: ApiResponse<{ user: SafeUser; token: string }> = {
+      success: true,
+      data: { user: toSafeUser(user), token },
+    };
+    res.status(201).json(body);
+  }),
+);
+
+// POST /api/auth/login — verifies email/password credentials and returns a JWT.
+router.post(
+  "/login",
+  authLimiter,
+  validate(loginSchema),
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const input = loginSchema.parse(req.body);
+    const user = await verifyCredentials(input);
+    const token = signToken(user);
+
+    logger.info({ userId: user.id }, "User logged in with email/password");
+
+    const body: ApiResponse<{ user: SafeUser; token: string }> = {
+      success: true,
+      data: { user: toSafeUser(user), token },
     };
     res.status(200).json(body);
   }),
@@ -143,9 +201,9 @@ router.get(
   verifyAuth,
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const user = getUser(req);
-    const body: ApiResponse<{ user: User | null }> = {
+    const body: ApiResponse<{ user: SafeUser | null }> = {
       success: true,
-      data: { user },
+      data: { user: toSafeUser(user) },
     };
     res.status(200).json(body);
   }),

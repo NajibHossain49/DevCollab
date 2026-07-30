@@ -203,7 +203,7 @@ function Nav() {
             size="sm"
             className={cn("text-white hover:opacity-90", GRADIENT)}
           >
-            <Link href="/login">Get started</Link>
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
       </div>
@@ -269,7 +269,7 @@ function Hero() {
                 GRADIENT,
               )}
             >
-              <Link href="/login">
+              <Link href="/signup">
                 Start for free
                 <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </Link>
@@ -518,7 +518,7 @@ function Pricing() {
                 )}
                 variant={plan.highlighted ? "default" : "outline"}
               >
-                <Link href="/login">{plan.cta}</Link>
+                <Link href="/signup">{plan.cta}</Link>
               </Button>
 
               <ul className="mt-6 space-y-3 text-sm">
@@ -597,7 +597,7 @@ function CtaBand() {
             size="lg"
             className="relative mt-8 bg-white text-neutral-900 shadow-lg transition-transform hover:scale-105 hover:bg-white/90"
           >
-            <Link href="/login">
+            <Link href="/signup">
               Get started free
               <ArrowRight />
             </Link>

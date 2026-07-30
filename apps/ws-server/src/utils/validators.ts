@@ -106,3 +106,30 @@ export const signinSchema = z.object({
   provider: z.literal("github"),
 });
 export type SigninInput = z.infer<typeof signinSchema>;
+
+// Email/password credential auth.
+const emailSchema = z
+  .string()
+  .trim()
+  .min(1, "Email is required")
+  .max(255)
+  .email("Enter a valid email address")
+  .toLowerCase();
+
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(72, "Password must be at most 72 characters"); // bcrypt truncates beyond 72 bytes
+
+export const registerSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100),
+  email: emailSchema,
+  password: passwordSchema,
+});
+export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required").max(72),
+});
+export type LoginInput = z.infer<typeof loginSchema>;

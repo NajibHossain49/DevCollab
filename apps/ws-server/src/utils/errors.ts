@@ -39,6 +39,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message = "Resource already exists") {
+    super("CONFLICT", message, 409);
+  }
+}
+
 export class DatabaseError extends AppError {
   constructor(message = "Database error", details?: Record<string, string[]>) {
     super("DATABASE_ERROR", message, 500, details);
