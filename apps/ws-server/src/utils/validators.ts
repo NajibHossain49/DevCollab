@@ -1,4 +1,4 @@
-import { MemberRole } from "@prisma/client";
+import { MemberRole, OrgRole } from "@prisma/client";
 import { z } from "zod";
 
 // Languages supported across rooms and execution (see .cursor/rules.md 10.5).
@@ -133,3 +133,63 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required").max(72),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// ============================================
+// ORGANIZATION SCHEMAS
+// ============================================
+export const orgSlugSchema = z.object({
+  slug: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug must be lowercase, alphanumeric, and hyphen-separated",
+    ),
+});
+export type OrgSlugParams = z.infer<typeof orgSlugSchema>;
+
+export const createOrgSchema = z.object({
+  name: z.string().trim().min(1, "Organization name is required").max(100),
+});
+export type CreateOrgInput = z.infer<typeof createOrgSchema>;
+
+export const updateOrgSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    slug: orgSlugSchema.shape.slug.optional(),
+  })
+  .refine((data) => data.name !== undefined || data.slug !== undefined, {
+    message: "Provide at least one field to update",
+  });
+export type UpdateOrgInput = z.infer<typeof updateOrgSchema>;
+
+// Only ADMIN or MEMBER can be assigned via invite / role change; ownership is
+// transferred through a dedicated flow, never assigned directly.
+const assignableOrgRoleSchema = z
+  .nativeEnum(OrgRole)
+  .refine((role) => role !== OrgRole.OWNER, {
+    message: "Role must be ADMIN or MEMBER",
+  });
+
+export const inviteMemberSchema = z.object({
+  email: emailSchema,
+  role: assignableOrgRoleSchema.default(OrgRole.MEMBER),
+});
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+
+export const acceptInviteSchema = z.object({
+  token: z.string().min(1, "Invite token is required"),
+});
+export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
+
+export const orgMemberRoleSchema = z.object({
+  role: assignableOrgRoleSchema,
+});
+export type OrgMemberRoleInput = z.infer<typeof orgMemberRoleSchema>;
+
+export const orgUserIdParamSchema = z.object({
+  slug: orgSlugSchema.shape.slug,
+  userId: z.string().uuid(),
+});
+export type OrgUserIdParams = z.infer<typeof orgUserIdParamSchema>;

@@ -29,6 +29,19 @@ const envSchema = z.object({
   // AI
   GROQ_API_KEY: z.string().optional(),
 
+  // Email (SendGrid — free tier, 100 emails/day)
+  // Leave SENDGRID_API_KEY empty to disable outbound email; invites still work
+  // and return a shareable link that can be sent manually.
+  SENDGRID_API_KEY: z.string().optional(),
+  SENDGRID_FROM_EMAIL: z.string().email().optional(),
+  SENDGRID_FROM_NAME: z.string().default("DevCollab"),
+  // Max emails to send per calendar day (SendGrid free tier is 100/day).
+  SENDGRID_DAILY_LIMIT: z.coerce.number().int().positive().default(100),
+
+  // Public base URL of the web frontend, used to build invite links
+  // (e.g. https://devcollab.vercel.app). Falls back to NEXTAUTH_URL.
+  WEB_APP_URL: z.string().url().optional(),
+
   // Code Execution (Codex API by Jaagrav)
   // Base URL of the Codex code-execution API. The public instance requires no
   // key; override only if you self-host Codex.

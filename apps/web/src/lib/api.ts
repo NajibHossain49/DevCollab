@@ -8,14 +8,22 @@ import type {
   AiExplainInput,
   ApiErrorBody,
   ApiResponse,
+  CreateOrgInput,
   CreateRoomInput,
   Execution,
   ExecuteCodeInput,
+  InviteMemberInput,
+  InviteResult,
   MemberRole,
+  Organization,
+  OrganizationMember,
+  OrgAnalytics,
+  OrgRole,
   PaginationMeta,
   PaginationParams,
   Room,
   RoomMember,
+  UpdateOrgInput,
   UpdateRoomInput,
   User,
 } from "@/types";
@@ -233,6 +241,56 @@ export const roomsApi = {
     request({ method: "DELETE", url: `/api/rooms/${slug}/members/${userId}` }),
 };
 
+export const orgsApi = {
+  list: async (): Promise<Organization[]> => {
+    const res = await request<{ organizations: Organization[] }>({
+      method: "GET",
+      url: "/api/orgs",
+    });
+    return res.data?.organizations ?? [];
+  },
+
+  get: (slug: string): Promise<ApiResponse<{ organization: Organization }>> =>
+    request({ method: "GET", url: `/api/orgs/${slug}` }),
+
+  create: (data: CreateOrgInput): Promise<ApiResponse<{ organization: Organization }>> =>
+    request({ method: "POST", url: "/api/orgs", data }),
+
+  update: (
+    slug: string,
+    data: UpdateOrgInput,
+  ): Promise<ApiResponse<{ organization: Organization }>> =>
+    request({ method: "PUT", url: `/api/orgs/${slug}`, data }),
+
+  analytics: (slug: string): Promise<ApiResponse<{ analytics: OrgAnalytics }>> =>
+    request({ method: "GET", url: `/api/orgs/${slug}/analytics` }),
+
+  invite: (
+    slug: string,
+    data: InviteMemberInput,
+  ): Promise<ApiResponse<{ invite: InviteResult }>> =>
+    request({ method: "POST", url: `/api/orgs/${slug}/invite`, data }),
+
+  acceptInvite: (
+    token: string,
+  ): Promise<ApiResponse<{ membership: OrganizationMember }>> =>
+    request({ method: "POST", url: "/api/orgs/invite/accept", data: { token } }),
+
+  updateMemberRole: (
+    slug: string,
+    userId: string,
+    role: Exclude<OrgRole, "OWNER">,
+  ): Promise<ApiResponse<{ membership: OrganizationMember }>> =>
+    request({
+      method: "PUT",
+      url: `/api/orgs/${slug}/members/${userId}/role`,
+      data: { role },
+    }),
+
+  removeMember: (slug: string, userId: string): Promise<ApiResponse<null>> =>
+    request({ method: "DELETE", url: `/api/orgs/${slug}/members/${userId}` }),
+};
+
 // A free-tier backend can take ~30-60s to cold-start from sleep, so give code
 // execution a long timeout before giving up.
 const EXECUTION_TIMEOUT_MS = 90_000;
@@ -319,6 +377,7 @@ export const aiApi = {
 export const api = {
   auth: authApi,
   rooms: roomsApi,
+  orgs: orgsApi,
   execute: executeApi,
   ai: aiApi,
 };

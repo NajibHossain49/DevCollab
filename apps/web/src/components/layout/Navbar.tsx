@@ -4,6 +4,7 @@ import { Code2, LogOut, Menu, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { OrgSwitcher } from "@/components/org/OrgSwitcher";
 import { Avatar, initialsFromName } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         <Code2 className="size-5 text-primary" />
         <span className="text-base tracking-tight">DevCollab</span>
       </Link>
+
+      {isAuthenticated ? (
+        <div className="hidden sm:block">
+          <OrgSwitcher />
+        </div>
+      ) : null}
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />

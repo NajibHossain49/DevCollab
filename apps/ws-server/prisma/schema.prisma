@@ -22,10 +22,12 @@ model User {
   passwordHash String? // Bcrypt hash; null for OAuth-only accounts
 
   // Relations
-  ownedRooms  Room[]        @relation("RoomOwner")
-  memberships RoomMember[]
-  executions  Execution[]
-  messages    ChatMessage[]
+  ownedRooms     Room[]               @relation("RoomOwner")
+  memberships    RoomMember[]
+  executions     Execution[]
+  messages       ChatMessage[]
+  ownedOrgs      Organization[]       @relation("OrgOwner")
+  orgMemberships OrganizationMember[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -33,6 +35,53 @@ model User {
   @@index([email])
   @@index([githubId])
   @@map("users")
+}
+
+// ============================================
+// ORGANIZATION MODEL (Team)
+// ============================================
+model Organization {
+  id      String @id @default(uuid())
+  name    String
+  slug    String @unique
+  ownerId String
+  owner   User   @relation("OrgOwner", fields: [ownerId], references: [id])
+
+  members OrganizationMember[]
+  rooms   Room[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([ownerId])
+  @@map("organizations")
+}
+
+// ============================================
+// ORGANIZATION MEMBER MODEL (Junction Table)
+// ============================================
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           OrgRole      @default(MEMBER)
+  invitedBy      String? // userId of whoever sent the invite
+  invitedAt      DateTime     @default(now())
+  joinedAt       DateTime?
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 // ============================================
@@ -56,6 +105,10 @@ model Room {
   executions Execution[]
   messages   ChatMessage[]
 
+  // Optional owning organization (team). Null for personal rooms.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   // Yjs document state (latest version)
   yjsState Bytes? // Binary Yjs document state
 
@@ -65,6 +118,7 @@ model Room {
   @@index([slug])
   @@index([ownerId])
   @@index([isPublic])
+  @@index([organizationId])
   @@map("rooms")
 }
 
@@ -137,7 +191,7 @@ model Execution {
 
   // Metadata
   executedById  String
-  executedBy    User    @relation(fields: [executedById], references: [id], onDelete: Cascade)
+  executedBy    User   @relation(fields: [executedById], references: [id], onDelete: Cascade)
   executionTime Int? // milliseconds
 
   createdAt DateTime @default(now())

@@ -27,6 +27,8 @@ export interface ApiResponse<T> {
 
 export type MemberRole = "OWNER" | "EDITOR" | "VIEWER";
 
+export type OrgRole = "OWNER" | "ADMIN" | "MEMBER";
+
 export type ExecutionStatus =
   | "PENDING"
   | "RUNNING"
@@ -94,6 +96,50 @@ export interface ChatMessage {
 }
 
 // ---------------------------------------------------------------------------
+// Organization (team) types.
+// ---------------------------------------------------------------------------
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+  // Present only on detail responses (GET /api/orgs/:slug).
+  owner?: User;
+  members?: OrganizationMember[];
+}
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: OrgRole;
+  invitedBy: string | null;
+  invitedAt: string;
+  joinedAt: string | null;
+  user?: User;
+}
+
+export interface OrgAnalytics {
+  totalMembers: number;
+  activeRooms: number;
+  totalRooms: number;
+  totalExecutions: number;
+  codingHours: number;
+}
+
+export type EmailStatus = "sent" | "disabled" | "queued" | "error";
+
+export interface InviteResult {
+  email: string;
+  role: OrgRole;
+  token: string;
+  inviteLink: string;
+  emailStatus: EmailStatus;
+}
+
+// ---------------------------------------------------------------------------
 // Request payloads.
 // ---------------------------------------------------------------------------
 
@@ -110,6 +156,20 @@ export interface ExecuteCodeInput {
   roomId: string;
   code: string;
   language: string;
+}
+
+export interface CreateOrgInput {
+  name: string;
+}
+
+export interface UpdateOrgInput {
+  name?: string;
+  slug?: string;
+}
+
+export interface InviteMemberInput {
+  email: string;
+  role: Exclude<OrgRole, "OWNER">;
 }
 
 export interface CursorPosition {
