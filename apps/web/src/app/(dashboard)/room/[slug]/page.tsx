@@ -9,6 +9,7 @@ import { AIAssistant } from "@/components/ai/AIAssistant";
 import { LiveCursors } from "@/components/awareness/LiveCursors";
 import { TypingIndicator } from "@/components/awareness/TypingIndicator";
 import { CallPanel } from "@/components/call/CallPanel";
+import { CallProvider } from "@/components/call/call-context";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { EditorInstanceProvider } from "@/components/editor/editor-context";
 import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
@@ -104,6 +105,7 @@ export default function RoomPage() {
   return (
     <YjsProvider roomId={room.id}>
       <EditorInstanceProvider>
+        <CallProvider>
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card">
           <RoomHeader room={room} />
 
@@ -212,6 +214,7 @@ export default function RoomPage() {
         <ErrorBoundary label="call" fallback={() => null}>
           <CallPanel />
         </ErrorBoundary>
+        </CallProvider>
       </EditorInstanceProvider>
     </YjsProvider>
   );

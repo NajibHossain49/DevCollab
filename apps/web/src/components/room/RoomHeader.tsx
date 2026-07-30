@@ -5,6 +5,7 @@ import { Check, Globe, Lock, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { CallButton } from "@/components/call/CallButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -137,6 +138,8 @@ export function RoomHeader({ room }: { room: Room }) {
             </span>
           ) : null}
         </div>
+
+        <CallButton />
 
         <Button variant="outline" size="sm" onClick={handleShare}>
           {copied ? <Check /> : <Share2 />}
