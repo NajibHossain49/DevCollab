@@ -193,3 +193,11 @@ export const orgUserIdParamSchema = z.object({
   userId: z.string().uuid(),
 });
 export type OrgUserIdParams = z.infer<typeof orgUserIdParamSchema>;
+
+// ============================================
+// BILLING SCHEMAS
+// ============================================
+export const verifyCheckoutSchema = z.object({
+  sessionId: z.string().min(1, "Checkout session id is required"),
+});
+export type VerifyCheckoutInput = z.infer<typeof verifyCheckoutSchema>;

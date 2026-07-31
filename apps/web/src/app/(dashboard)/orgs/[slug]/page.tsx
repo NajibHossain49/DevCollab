@@ -4,14 +4,16 @@ import {
   BarChart3,
   Building2,
   Clock,
+  CreditCard,
   DoorOpen,
   Terminal,
   UserPlus,
   Users,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useState, type ComponentType } from "react";
+import { Suspense, useState, type ComponentType } from "react";
 
+import { BillingPanel } from "@/components/org/BillingPanel";
 import { InviteMemberModal } from "@/components/org/InviteMemberModal";
 import { MemberList } from "@/components/org/MemberList";
 import { OrgSettings } from "@/components/org/OrgSettings";
@@ -22,11 +24,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrganization, useOrgAnalytics } from "@/hooks/useOrganization";
 import type { OrganizationMember, OrgRole } from "@/types";
 
-type Tab = "members" | "analytics" | "settings";
+type Tab = "members" | "analytics" | "billing" | "settings";
 
 const TABS: { id: Tab; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { id: "members", label: "Members", icon: Users },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "billing", label: "Billing", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Building2 },
 ];
 
@@ -132,6 +135,12 @@ export default function OrganizationPage() {
       ) : null}
 
       {tab === "analytics" ? <AnalyticsTab slug={slug} /> : null}
+
+      {tab === "billing" ? (
+        <Suspense fallback={<Skeleton className="h-48 w-full max-w-2xl" />}>
+          <BillingPanel slug={slug} canManage={canManage} />
+        </Suspense>
+      ) : null}
 
       {tab === "settings" ? (
         <OrgSettings organization={organization} canEdit={canManage} />

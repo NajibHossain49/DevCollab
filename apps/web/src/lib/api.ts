@@ -8,6 +8,7 @@ import type {
   AiExplainInput,
   ApiErrorBody,
   ApiResponse,
+  BillingStatus,
   CreateOrgInput,
   CreateRoomInput,
   Execution,
@@ -291,6 +292,27 @@ export const orgsApi = {
     request({ method: "DELETE", url: `/api/orgs/${slug}/members/${userId}` }),
 };
 
+export const billingApi = {
+  status: (slug: string): Promise<ApiResponse<{ billing: BillingStatus }>> =>
+    request({ method: "GET", url: `/api/orgs/${slug}/billing` }),
+
+  checkout: (slug: string): Promise<ApiResponse<{ url: string }>> =>
+    request({ method: "POST", url: `/api/orgs/${slug}/billing/checkout` }),
+
+  portal: (slug: string): Promise<ApiResponse<{ url: string }>> =>
+    request({ method: "POST", url: `/api/orgs/${slug}/billing/portal` }),
+
+  verify: (
+    slug: string,
+    sessionId: string,
+  ): Promise<ApiResponse<{ billing: BillingStatus }>> =>
+    request({
+      method: "POST",
+      url: `/api/orgs/${slug}/billing/verify`,
+      data: { sessionId },
+    }),
+};
+
 // A free-tier backend can take ~30-60s to cold-start from sleep, so give code
 // execution a long timeout before giving up.
 const EXECUTION_TIMEOUT_MS = 90_000;
@@ -378,6 +400,7 @@ export const api = {
   auth: authApi,
   rooms: roomsApi,
   orgs: orgsApi,
+  billing: billingApi,
   execute: executeApi,
   ai: aiApi,
 };

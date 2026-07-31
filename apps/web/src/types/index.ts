@@ -29,6 +29,8 @@ export type MemberRole = "OWNER" | "EDITOR" | "VIEWER";
 
 export type OrgRole = "OWNER" | "ADMIN" | "MEMBER";
 
+export type OrgPlan = "FREE" | "PRO";
+
 export type ExecutionStatus =
   | "PENDING"
   | "RUNNING"
@@ -119,6 +121,14 @@ export interface OrganizationMember {
   invitedAt: string;
   joinedAt: string | null;
   user?: User;
+}
+
+export interface BillingStatus {
+  enabled: boolean;
+  plan: OrgPlan;
+  subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
+  hasStripeCustomer: boolean;
 }
 
 export interface OrgAnalytics {

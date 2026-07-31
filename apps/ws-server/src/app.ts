@@ -96,12 +96,37 @@ async function buildHealthReport(): Promise<HealthReport> {
   };
 }
 
+// Stripe webhook signature verification needs the untouched raw request body,
+// so this path must bypass the JSON body parser.
+const STRIPE_WEBHOOK_PATH = "/api/billing/webhook";
+
+function isWebhookRequest(req: Request): boolean {
+  return req.path === STRIPE_WEBHOOK_PATH;
+}
+
 function buildApp(): Express {
   const app = express();
 
-  // 1 & 2. Body / form parsers.
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  // 0. Raw body for the Stripe webhook only (before the JSON parser consumes it).
+  app.use(STRIPE_WEBHOOK_PATH, express.raw({ type: "*/*" }));
+
+  // 1 & 2. Body / form parsers — skipped for the webhook path.
+  const jsonParser = express.json();
+  const urlencodedParser = express.urlencoded({ extended: true });
+  app.use((req: Request, res: Response, next: NextFunction): void => {
+    if (isWebhookRequest(req)) {
+      next();
+      return;
+    }
+    jsonParser(req, res, next);
+  });
+  app.use((req: Request, res: Response, next: NextFunction): void => {
+    if (isWebhookRequest(req)) {
+      next();
+      return;
+    }
+    urlencodedParser(req, res, next);
+  });
 
   // 3. CORS.
   app.use(cors(corsOptions));

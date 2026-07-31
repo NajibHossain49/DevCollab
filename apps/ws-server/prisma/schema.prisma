@@ -50,12 +50,29 @@ model Organization {
   members OrganizationMember[]
   rooms   Room[]
 
+  // --- Billing (Stripe) ---
+  // Stored in the DB so this test-mode integration is production-ready: the
+  // same fields back real subscriptions once live Stripe keys are used.
+  plan                 OrgPlan   @default(FREE)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  // Raw Stripe subscription status (active, trialing, past_due, canceled, ...).
+  subscriptionStatus   String?
+  // End of the current paid period; used to show renewal / expiry in the UI.
+  currentPeriodEnd     DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([slug])
   @@index([ownerId])
   @@map("organizations")
+}
+
+enum OrgPlan {
+  FREE
+  PRO
 }
 
 // ============================================

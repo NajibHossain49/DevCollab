@@ -42,6 +42,15 @@ const envSchema = z.object({
   // (e.g. https://devcollab.vercel.app). Falls back to NEXTAUTH_URL.
   WEB_APP_URL: z.string().url().optional(),
 
+  // Billing (Stripe). Use test-mode keys for now; swapping in live keys
+  // later flips this to real charges without code changes. All optional so
+  // the server boots (with billing disabled) when unset.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  // Signing secret for the Stripe webhook endpoint (whsec_...).
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  // Price ID of the recurring "Pro" plan (price_...), created in Stripe.
+  STRIPE_PRO_PRICE_ID: z.string().optional(),
+
   // Code Execution (Codex API by Jaagrav)
   // Base URL of the Codex code-execution API. The public instance requires no
   // key; override only if you self-host Codex.

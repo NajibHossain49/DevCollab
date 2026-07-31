@@ -2,7 +2,7 @@
 
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,6 +13,20 @@ import { ApiError, orgsApi } from "@/lib/api";
 type Status = "idle" | "accepting" | "success" | "error";
 
 export default function AcceptInvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-4 text-center">
+          <Spinner className="size-8" />
+        </div>
+      }
+    >
+      <AcceptInviteInner />
+    </Suspense>
+  );
+}
+
+function AcceptInviteInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");

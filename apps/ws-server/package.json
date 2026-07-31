@@ -33,6 +33,7 @@
     "jsonwebtoken": "^9.0.3",
     "pino": "^9.13.1",
     "rate-limiter-flexible": "^11.2.0",
+    "stripe": "^22.4.0",
     "ws": "^8.21.1",
     "yjs": "^13.6.31",
     "zod": "^3.25.76"
