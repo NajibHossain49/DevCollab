@@ -51,6 +51,33 @@ const envSchema = z.object({
   // Price ID of the recurring "Pro" plan (price_...), created in Stripe.
   STRIPE_PRO_PRICE_ID: z.string().optional(),
 
+  // Secret used to encrypt OAuth tokens at rest (AES-256-GCM). Falls back to
+  // NEXTAUTH_SECRET when unset. Set a dedicated 32+ char value in production.
+  // Empty strings from a scaffolded .env are treated as unset.
+  ENCRYPTION_KEY: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().min(16).optional(),
+  ),
+
+  // Public base URL of THIS API server, used to build Git OAuth redirect URIs
+  // (e.g. https://api.devcollab.app). When unset it is derived from the
+  // incoming request headers, which works for local dev.
+  API_PUBLIC_URL: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url().optional(),
+  ),
+
+  // --- Git provider OAuth (Project Management Integration) ---
+  // All free APIs. Each provider is optional; a provider whose credentials are
+  // missing simply reports "not configured" instead of breaking the app.
+  // GitHub can reuse the auth OAuth app or use a dedicated one below.
+  GIT_GITHUB_CLIENT_ID: z.string().optional(),
+  GIT_GITHUB_CLIENT_SECRET: z.string().optional(),
+  GITLAB_CLIENT_ID: z.string().optional(),
+  GITLAB_CLIENT_SECRET: z.string().optional(),
+  BITBUCKET_CLIENT_ID: z.string().optional(),
+  BITBUCKET_CLIENT_SECRET: z.string().optional(),
+
   // Code Execution (Codex API by Jaagrav)
   // Base URL of the Codex code-execution API. The public instance requires no
   // key; override only if you self-host Codex.

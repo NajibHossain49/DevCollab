@@ -10,9 +10,19 @@ import type {
   ApiResponse,
   BillingStatus,
   CreateOrgInput,
+  CreatePullRequestInput,
   CreateRoomInput,
   Execution,
   ExecuteCodeInput,
+  GitCommit,
+  GitFileEntry,
+  GitIssue,
+  GitListState,
+  GitProviderSlug,
+  GitProvidersInfo,
+  GitPullRequest,
+  GitRepo,
+  GitSyncDirection,
   InviteMemberInput,
   InviteResult,
   MemberRole,
@@ -313,6 +323,96 @@ export const billingApi = {
     }),
 };
 
+export const gitApi = {
+  providers: (): Promise<ApiResponse<GitProvidersInfo>> =>
+    request({ method: "GET", url: "/api/git/providers" }),
+
+  connect: (provider: GitProviderSlug): Promise<ApiResponse<{ url: string }>> =>
+    request({ method: "GET", url: `/api/git/${provider}/connect` }),
+
+  disconnect: (id: string): Promise<ApiResponse<null>> =>
+    request({ method: "DELETE", url: `/api/git/integrations/${id}` }),
+
+  repos: async (provider?: GitProviderSlug): Promise<GitRepo[]> => {
+    const res = await request<{ repos: GitRepo[] }>({
+      method: "GET",
+      url: "/api/git/repos",
+      params: provider ? { provider } : undefined,
+    });
+    return res.data?.repos ?? [];
+  },
+
+  linkRepo: (id: string, roomId: string): Promise<ApiResponse<{ repo: GitRepo }>> =>
+    request({ method: "POST", url: `/api/git/repos/${id}/link`, data: { roomId } }),
+
+  sync: (
+    id: string,
+    data: { roomId: string; direction: GitSyncDirection; branch?: string; commitMessage?: string },
+  ): Promise<ApiResponse<{ commit?: GitCommit; direction?: string }>> =>
+    request({ method: "POST", url: `/api/git/repos/${id}/sync`, data }),
+
+  files: async (
+    id: string,
+    params: { path?: string; branch?: string } = {},
+  ): Promise<GitFileEntry[]> => {
+    const res = await request<{ files: GitFileEntry[] }>({
+      method: "GET",
+      url: `/api/git/repos/${id}/files`,
+      params,
+    });
+    return res.data?.files ?? [];
+  },
+
+  content: (
+    id: string,
+    path: string,
+    branch?: string,
+  ): Promise<ApiResponse<{ path: string; content: string }>> =>
+    request({ method: "GET", url: `/api/git/repos/${id}/content`, params: { path, branch } }),
+
+  createPullRequest: (
+    data: CreatePullRequestInput,
+  ): Promise<ApiResponse<{ pullRequest: GitPullRequest }>> =>
+    request({ method: "POST", url: "/api/git/pull-requests", data }),
+
+  pullRequests: async (
+    roomId: string,
+    state: GitListState = "open",
+  ): Promise<GitPullRequest[]> => {
+    const res = await request<{ pullRequests: GitPullRequest[] }>({
+      method: "GET",
+      url: "/api/git/pull-requests",
+      params: { roomId, state },
+    });
+    return res.data?.pullRequests ?? [];
+  },
+
+  commits: async (roomId: string, branch?: string): Promise<GitCommit[]> => {
+    const res = await request<{ commits: GitCommit[] }>({
+      method: "GET",
+      url: "/api/git/commits",
+      params: { roomId, branch },
+    });
+    return res.data?.commits ?? [];
+  },
+
+  issues: async (roomId: string, state: GitListState = "open"): Promise<GitIssue[]> => {
+    const res = await request<{ issues: GitIssue[] }>({
+      method: "GET",
+      url: "/api/git/issues",
+      params: { roomId, state },
+    });
+    return res.data?.issues ?? [];
+  },
+
+  createIssue: (data: {
+    roomId: string;
+    title: string;
+    body?: string;
+  }): Promise<ApiResponse<{ issue: GitIssue }>> =>
+    request({ method: "POST", url: "/api/git/issues", data }),
+};
+
 // A free-tier backend can take ~30-60s to cold-start from sleep, so give code
 // execution a long timeout before giving up.
 const EXECUTION_TIMEOUT_MS = 90_000;
@@ -401,6 +501,7 @@ export const api = {
   rooms: roomsApi,
   orgs: orgsApi,
   billing: billingApi,
+  git: gitApi,
   execute: executeApi,
   ai: aiApi,
 };

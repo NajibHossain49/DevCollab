@@ -199,6 +199,79 @@ export interface AiExplainInput {
 }
 
 // ---------------------------------------------------------------------------
+// Git integration (Project Management)
+// ---------------------------------------------------------------------------
+export type GitProviderSlug = "github" | "gitlab" | "bitbucket";
+
+export interface GitIntegration {
+  id: string;
+  provider: GitProviderSlug;
+  accountLogin: string | null;
+  createdAt: string;
+}
+
+export interface GitProvidersInfo {
+  configured: GitProviderSlug[];
+  integrations: GitIntegration[];
+}
+
+export interface GitRepo {
+  id: string;
+  provider: GitProviderSlug;
+  providerRepoId: string;
+  name: string;
+  fullName: string;
+  url: string;
+  defaultBranch: string;
+  isPrivate: boolean;
+  isLinked: boolean;
+  linkedRoomId: string | null;
+}
+
+export interface GitFileEntry {
+  name: string;
+  path: string;
+  type: "file" | "dir";
+  size?: number;
+}
+
+export interface GitCommit {
+  sha: string;
+  message: string;
+  author: string;
+  authoredAt: string;
+  url: string;
+}
+
+export interface GitPullRequest {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+  head: string;
+  base: string;
+}
+
+export interface GitIssue {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+}
+
+export type GitSyncDirection = "toRepo" | "toRoom";
+
+export type GitListState = "open" | "closed" | "all";
+
+export interface CreatePullRequestInput {
+  roomId: string;
+  title: string;
+  description?: string;
+  headBranch?: string;
+  baseBranch?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Frontend-only helper types.
 // ---------------------------------------------------------------------------
 

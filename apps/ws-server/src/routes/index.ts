@@ -4,6 +4,7 @@ import aiRoutes from "./ai.routes.js";
 import authRoutes from "./auth.routes.js";
 import billingRoutes, { billingWebhookRouter } from "./billing.routes.js";
 import executeRoutes from "./execute.routes.js";
+import gitRoutes from "./git.routes.js";
 import orgRoutes from "./org.routes.js";
 import roomRoutes from "./room.routes.js";
 
@@ -19,5 +20,7 @@ router.use("/orgs", billingRoutes);
 router.use("/billing", billingWebhookRouter);
 router.use("/execute", executeRoutes);
 router.use("/ai", aiRoutes);
+// Git integration (OAuth, repos, PRs, commits, issues).
+router.use("/git", gitRoutes);
 
 export default router;

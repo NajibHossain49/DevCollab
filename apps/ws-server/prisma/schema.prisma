@@ -22,12 +22,13 @@ model User {
   passwordHash String? // Bcrypt hash; null for OAuth-only accounts
 
   // Relations
-  ownedRooms     Room[]               @relation("RoomOwner")
-  memberships    RoomMember[]
-  executions     Execution[]
-  messages       ChatMessage[]
-  ownedOrgs      Organization[]       @relation("OrgOwner")
-  orgMemberships OrganizationMember[]
+  ownedRooms      Room[]               @relation("RoomOwner")
+  memberships     RoomMember[]
+  executions      Execution[]
+  messages        ChatMessage[]
+  ownedOrgs       Organization[]       @relation("OrgOwner")
+  orgMemberships  OrganizationMember[]
+  gitIntegrations GitIntegration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -47,8 +48,9 @@ model Organization {
   ownerId String
   owner   User   @relation("OrgOwner", fields: [ownerId], references: [id])
 
-  members OrganizationMember[]
-  rooms   Room[]
+  members         OrganizationMember[]
+  rooms           Room[]
+  gitIntegrations GitIntegration[]
 
   // --- Billing (Stripe) ---
   // Stored in the DB so this test-mode integration is production-ready: the
@@ -126,6 +128,14 @@ model Room {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
+  // --- Git integration ---
+  // Primary linked repo for this room (used for sync / PR creation).
+  gitRepoId    String?
+  gitRepo      GitRepo?      @relation("RoomPrimaryRepo", fields: [gitRepoId], references: [id])
+  // Repos that point back to this room (GitRepo.linkedRoomId).
+  linkedRepos  GitRepo[]     @relation("RepoLinkedRoom")
+  pullRequests PullRequest[]
+
   // Yjs document state (latest version)
   yjsState Bytes? // Binary Yjs document state
 
@@ -136,6 +146,7 @@ model Room {
   @@index([ownerId])
   @@index([isPublic])
   @@index([organizationId])
+  @@index([gitRepoId])
   @@map("rooms")
 }
 
@@ -245,4 +256,97 @@ model ChatMessage {
   @@index([roomId])
   @@index([createdAt])
   @@map("chat_messages")
+}
+
+// ============================================
+// GIT INTEGRATION MODELS (Project Management)
+// ============================================
+model GitIntegration {
+  id       String      @id @default(uuid())
+  provider GitProvider
+
+  // OAuth tokens, stored encrypted at rest (AES-256-GCM). Never returned raw.
+  accessToken    String
+  refreshToken   String?
+  // Provider account handle/login for display.
+  accountLogin   String?
+  // Token expiry (for providers that issue short-lived tokens, e.g. GitLab).
+  tokenExpiresAt DateTime?
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  repos GitRepo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, ownerId])
+  @@index([ownerId])
+  @@map("git_integrations")
+}
+
+model GitRepo {
+  id            String         @id @default(uuid())
+  integrationId String
+  integration   GitIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  providerRepoId String // The provider's own repo id
+  name           String
+  fullName       String // owner/repo
+  url            String
+  defaultBranch  String  @default("main")
+  isPrivate      Boolean @default(false)
+
+  isLinked     Boolean @default(false)
+  linkedRoomId String?
+  room         Room?   @relation("RepoLinkedRoom", fields: [linkedRoomId], references: [id])
+
+  // Rooms that use this repo as their primary repo (Room.gitRepoId).
+  primaryForRooms Room[] @relation("RoomPrimaryRepo")
+
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([integrationId, providerRepoId])
+  @@index([integrationId])
+  @@index([linkedRoomId])
+  @@map("git_repos")
+}
+
+model PullRequest {
+  id     String @id @default(uuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  provider    GitProvider
+  prNumber    Int
+  title       String
+  description String?
+  branchFrom  String
+  branchTo    String
+  status      PRStatus    @default(OPEN)
+  url         String
+  createdBy   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@map("pull_requests")
+}
+
+enum GitProvider {
+  GITHUB
+  GITLAB
+  BITBUCKET
+}
+
+enum PRStatus {
+  OPEN
+  CLOSED
+  MERGED
 }

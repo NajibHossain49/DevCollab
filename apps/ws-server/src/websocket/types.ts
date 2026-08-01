@@ -234,6 +234,26 @@ export interface MediaStateChangedMessage {
   payload: { userId: string } & MediaState;
 }
 
+// --- Git integration (server -> client) -------------------------------------
+export type GitEventType =
+  | "commit"
+  | "pr_created"
+  | "issue_created"
+  | "repo_synced"
+  | "branch_push";
+
+export interface GitEventMessage {
+  type: "GIT_EVENT";
+  payload: {
+    roomId: string;
+    event: GitEventType;
+    message: string;
+    actor?: string;
+    url?: string;
+    timestamp: string;
+  };
+}
+
 export type ServerMessage =
   | UserJoinedMessage
   | UserLeftMessage
@@ -247,7 +267,8 @@ export type ServerMessage =
   | RtcOfferMessage
   | RtcAnswerMessage
   | IceCandidateMessage
-  | MediaStateChangedMessage;
+  | MediaStateChangedMessage
+  | GitEventMessage;
 
 // Outgoing messages broadcast to clients.
 export type WebSocketMessage = ServerMessage;

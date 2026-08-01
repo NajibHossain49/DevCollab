@@ -1,6 +1,12 @@
 import { MemberRole, OrgRole } from "@prisma/client";
 import { z } from "zod";
 
+// Git provider slug as used in URLs and the client (lowercase). Mapped to the
+// Prisma GitProvider enum server-side.
+export const GIT_PROVIDER_SLUGS = ["github", "gitlab", "bitbucket"] as const;
+export const gitProviderSlugSchema = z.enum(GIT_PROVIDER_SLUGS);
+export type GitProviderSlug = z.infer<typeof gitProviderSlugSchema>;
+
 // Languages supported across rooms and execution (see .cursor/rules.md 10.5).
 export const SUPPORTED_LANGUAGES = [
   "javascript",
@@ -201,3 +207,71 @@ export const verifyCheckoutSchema = z.object({
   sessionId: z.string().min(1, "Checkout session id is required"),
 });
 export type VerifyCheckoutInput = z.infer<typeof verifyCheckoutSchema>;
+
+// ============================================
+// GIT INTEGRATION SCHEMAS
+// ============================================
+export const gitProviderParamSchema = z.object({
+  provider: gitProviderSlugSchema,
+});
+export type GitProviderParams = z.infer<typeof gitProviderParamSchema>;
+
+export const idParamSchema = z.object({
+  id: z.string().uuid(),
+});
+export type IdParams = z.infer<typeof idParamSchema>;
+
+export const linkRepoSchema = z.object({
+  roomId: z.string().uuid(),
+});
+export type LinkRepoInput = z.infer<typeof linkRepoSchema>;
+
+export const syncRepoSchema = z.object({
+  roomId: z.string().uuid(),
+  direction: z.enum(["toRepo", "toRoom"]).default("toRepo"),
+  branch: z.string().min(1).max(200).optional(),
+  commitMessage: z.string().max(500).optional(),
+});
+export type SyncRepoInput = z.infer<typeof syncRepoSchema>;
+
+export const repoFilesQuerySchema = z.object({
+  path: z.string().max(400).optional(),
+  branch: z.string().min(1).max(200).optional(),
+});
+export type RepoFilesQuery = z.infer<typeof repoFilesQuerySchema>;
+
+export const fileContentQuerySchema = z.object({
+  path: z.string().min(1).max(400),
+  branch: z.string().min(1).max(200).optional(),
+});
+export type FileContentQuery = z.infer<typeof fileContentQuerySchema>;
+
+export const createPullRequestSchema = z.object({
+  roomId: z.string().uuid(),
+  title: z.string().trim().min(1).max(256),
+  description: z.string().max(10000).optional(),
+  headBranch: z.string().min(1).max(200).optional(),
+  baseBranch: z.string().min(1).max(200).optional(),
+});
+export type CreatePullRequestInput = z.infer<typeof createPullRequestSchema>;
+
+const gitStateSchema = z.enum(["open", "closed", "all"]).default("open");
+
+export const listByRoomQuerySchema = z.object({
+  roomId: z.string().uuid(),
+  state: gitStateSchema,
+});
+export type ListByRoomQuery = z.infer<typeof listByRoomQuerySchema>;
+
+export const commitsQuerySchema = z.object({
+  roomId: z.string().uuid(),
+  branch: z.string().min(1).max(200).optional(),
+});
+export type CommitsQuery = z.infer<typeof commitsQuerySchema>;
+
+export const createIssueSchema = z.object({
+  roomId: z.string().uuid(),
+  title: z.string().trim().min(1).max(256),
+  body: z.string().max(10000).optional(),
+});
+export type CreateIssueInput = z.infer<typeof createIssueSchema>;

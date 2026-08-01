@@ -46,6 +46,30 @@ export class DocumentManager {
     return this._documents.get(roomId)?.yText.toString() ?? "";
   }
 
+  // Returns the current text only if the doc is already loaded in memory,
+  // without creating an empty one (which would risk overwriting persisted state).
+  getExistingDocumentText(roomId: string): string | null {
+    const entry = this._documents.get(roomId);
+    return entry ? entry.yText.toString() : null;
+  }
+
+  hasDocument(roomId: string): boolean {
+    return this._documents.has(roomId);
+  }
+
+  // Replaces the shared "code" text with new content and returns the full,
+  // encoded Yjs state so callers can broadcast a DOC_SYNC to connected clients.
+  replaceDocumentText(roomId: string, content: string): Uint8Array {
+    const doc = this.getOrCreateDocument(roomId);
+    const entry = this._documents.get(roomId);
+    const yText = entry?.yText ?? doc.getText("code");
+    doc.transact(() => {
+      yText.delete(0, yText.length);
+      yText.insert(0, content);
+    });
+    return Y.encodeStateAsUpdate(doc);
+  }
+
   async persistDocument(roomId: string): Promise<void> {
     const state = this.getDocumentState(roomId);
     await saveDocumentState(roomId, state);

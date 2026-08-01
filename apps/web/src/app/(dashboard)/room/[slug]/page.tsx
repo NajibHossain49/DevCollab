@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, Play, Sparkles, X } from "lucide-react";
+import { GitBranch, MessageSquare, Play, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
 import { YjsProvider } from "@/components/editor/YjsProvider";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ExecutionPanel } from "@/components/execution/ExecutionPanel";
+import { GitPanel } from "@/components/git/GitPanel";
 import { RoomHeader } from "@/components/room/RoomHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,12 +39,13 @@ const CodeEditor = dynamic(
   },
 );
 
-type PanelTab = "chat" | "run" | "ai";
+type PanelTab = "chat" | "run" | "ai" | "git";
 
 const TABS: { id: PanelTab; label: string; icon: typeof MessageSquare }[] = [
   { id: "chat", label: "Chat", icon: MessageSquare },
   { id: "run", label: "Run", icon: Play },
   { id: "ai", label: "AI", icon: Sparkles },
+  { id: "git", label: "Git", icon: GitBranch },
 ];
 
 export default function RoomPage() {
@@ -99,6 +101,7 @@ export default function RoomPage() {
           canClearHistory={isOwner}
         />
       );
+    if (id === "git") return <GitPanel roomId={room.id} />;
     return <AIAssistant />;
   };
 
